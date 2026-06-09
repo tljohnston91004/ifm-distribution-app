@@ -1,0 +1,308 @@
+﻿
+Document 4 - IFM-Distribution V1.5 Calculation and Decision Logic Guide
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Purpose and Core Decision Principle
+This document defines the calculations and decision rules IFM uses after source data has been mapped into standard IFM domains. Source system should affect validation and confidence, not the core formula.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. Core Decision Flow
+Take financial snapshot
+Validate data readiness
+Calculate core operating cash funding
+Calculate supplemental funding capacity
+Calculate total potential inventory funding
+Identify purchase candidates
+Evaluate evidence quality
+Evaluate inventory need and RSE support
+Evaluate vendor terms/payment timing/vendor offers
+Evaluate cash conversion timing
+Evaluate funding source and financing risk
+Separate fundable vs. recommended
+Rank and allocate funding, including holdback
+Assign purchase funding decisions
+Separate funding approval from purchase approval
+Set approval expiration and re-review controls
+Produce internal reviewer output
+Produce customer-facing output after approval
+Track actual ordered/received/billed/paid/follow-up results
+3. Run Readiness Logic
+Readiness label
+Use when
+Ready
+Required data present, sources validated, confidence sufficient
+Ready with Limitations
+Core calculation can run but some data is stale, missing, manual or limited
+Not Ready
+Core cash/funding window/reserve/AP/outflow/open PO/purchase candidate data missing and not confirmed none
+Action-Area Blocked
+Run can continue but a specific area such as vendor offer or LOC review is blocked
+4. Core Operating Cash Funding Calculation
+Core Available Inventory Funding = Cash on Hand + Included High-Confidence Expected Inflows + Included Medium/Low Confidence Expected Inflows adjusted by confidence factor - Protected Cash Reserve - Required Outflows - AP Pressure Amount - Committed Open PO Exposure - Manual Cash Reductions + Manual Cash Additions
+Input
+Treatment
+Cash on hand
+Include starting cash from validated cash position
+High-confidence AR
+Suggested 100% inclusion
+Medium-confidence AR
+Suggested 50%-75% inclusion; Document 7 uses 60%
+Low-confidence AR
+Suggested 0%-25% inclusion; Document 7 uses 20%
+Required outflows
+Subtract before inventory funding
+AP pressure
+Subtract AP due in funding window; include past-due and critical vendor AP
+Open PO exposure
+Include committed PO exposure; avoid AP/PO double-counting
+Draft POs
+Treat as purchase candidates, not committed exposure
+Negative result
+Warn that core cash does not support new inventory purchases without supplemental funding or management override
+5. Open PO Exposure Treatment
+PO status
+IFM treatment
+Draft / not sent
+Purchase candidate, not committed exposure
+Sent but changeable
+Include partial exposure or flag review
+Vendor confirmed
+Include as committed exposure
+Partially shipped
+Include remaining expected exposure
+Fully shipped
+Include expected AP exposure
+Received but not billed
+Include as AP exposure risk
+Billed / AP created
+Include in AP and avoid double-counting
+Closed
+Exclude
+6. Supplemental Funding Calculation
+Supplemental Funding Capacity = Approved Inventory LOC Capacity + Approved Net Factoring Proceeds + Other Approved Short-Term Funding. Total Potential Inventory Funding = Core Available Inventory Funding + Supplemental Funding Capacity.
+Supplemental source
+Calculation / rule
+Line of Credit
+Available LOC = LOC limit - current balance - borrowing-base limitation. Approved inventory LOC = min(available LOC, management-approved inventory draw limit). LOC is not cash and requires approval when approval_required = yes.
+Factoring
+Net proceeds = eligible AR x advance rate - factoring fee - reserve holdback. Factored AR cannot also be counted as expected collection.
+Other funding
+Must be management-approved, separately labeled, and risk-noted.
+7. No Double-Counting Rule
+AR cannot be counted as both expected collection and factored proceeds.
+LOC availability cannot be counted if already drawn into cash unless clearly classified.
+Open PO exposure should not also be counted as AP unless received/billed status supports AP treatment.
+Factoring proceeds must be net of fees and holdbacks.
+Replacement uploads and superseded records should not feed active calculations unless restored by reviewer.
+8. Purchase Candidate Evaluation and Evidence Hierarchy
+Evidence rank
+Source/evidence
+Treatment
+1
+Confirmed customer order/backorder
+Highest support
+2
+RSE-supported fast-moving replenishment need
+High support
+3
+RSE-supported below-Min item with strong demand
+High support
+4
+Reorder report supported by current Min/Max and recent demand
+Moderate/high support
+5
+Buyer request with documented demand or customer need
+Moderate support
+6
+Vendor offer supported by strong demand and sell-through
+Moderate support
+7
+Strategic item exception with documented reason
+Requires approval
+8
+Vendor offer based mostly on discount/terms/vendor pressure
+Weak/caution
+9
+Manual request with limited support
+Weak
+10
+Unsupported request
+Hold or decline
+9. RSE Classification Funding Priority Logic
+RSE classification type
+IFM priority
+Fast-moving / high-confidence replenishment
+High priority
+Moderate-moving / supported replenishment
+Medium priority
+Seasonal / uneven demand
+Caution; scenario and timing review
+Slow-moving / overstocked / weak demand
+Low priority; reduce, delay, exclude, or approve only with reason
+No classification / low confidence
+Review needed; use other evidence with limitation
+10. Keystroke or Other Reorder Logic Treatment
+Suggested order/reorder data is evidence and can create purchase candidates, but it is not IFM approval. This rule applies to Keystroke and to equivalent ERP/POS reorder reports. Keystroke import-ready outputs, if generated, must be tab-delimited .txt.
+11. Vendor Offer / Promo-Buy Decision Logic
+Logic area
+Required behavior
+Normal vs offer purchase
+Incremental Purchase Amount = Vendor Offer Required Purchase Amount - Normal Needed Purchase Amount
+Benefit estimate
+Discount, free freight, rebate, extended terms timing, gross profit dollars where available
+Risk estimate
+Incremental inventory burden, slow-moving risk, overstock, financing need/cost, cash conversion mismatch, concentration risk
+RSE mix
+Break offer into fast/moderate/slow items when possible
+Decision labels
+Take full offer, take partial offer, approve normal purchase only, split, delay, decline, hold, owner approval
+Rule
+Discounts and terms do not automatically justify overbuying
+12. Cash Conversion Timing Logic
+Timing condition
+Status
+Expected cash conversion before payment due
+Good Match
+Expected cash conversion near payment due
+Caution
+Expected cash conversion after payment due
+Mismatch
+Data missing
+Unknown
+Extended terms help only if expected sell-through and collection timing reasonably align with vendor payment due dates or financing repayment/cost.
+13. Fundable vs. Recommended Logic
+Funding status options
+Recommendation status options
+Cash Fundable, Fundable with Expected Inflows, Fundable with LOC Approval, Fundable with Factoring Approval, Fundable with Vendor Terms, Not Currently Fundable, Funding Source Unclear
+Recommended, Recommended with Caution, Partially Recommended, Not Recommended, Hold Until More Data, Owner Review Required, Emergency Review Required
+Example: a slow-moving vendor promo may be fundable with LOC but not recommended because it will not convert back to cash before payment comes due.
+14. Funding Allocation, Partial Funding, and Holdback
+Allocation factor
+Use
+Customer backorder/service risk
+Highest urgency
+RSE class and below-Min status
+Funding priority
+Reorder support
+Evidence strength
+Gross profit dollars and velocity
+Value and cash return
+Cash conversion timing
+Timing support
+Vendor terms/promo benefit
+Opportunity value
+Inventory burden/slow-moving risk
+Risk deduction
+Vendor concentration
+Crowding-out risk
+Financing requirement
+Approval and cost risk
+Data confidence
+Recommendation strength
+Funding bucket
+Purpose
+Must-Fund / Service Protection
+Protect confirmed demand/service risk
+Normal Replenishment
+Supported replenishment
+Vendor Promo / Opportunity Buy
+Supported deals
+Emergency Reserve / Holdback
+Preserve funding for urgent needs
+Delayed / Watchlist
+Valid but not funded now
+15. Decision Assignment and Approval Controls
+Decision label
+Use when
+Approve
+Funding available and purchase need supported
+Approve with Caution
+Reasonable but risk/limited confidence exists
+Reduce Order
+Some purchase justified; full amount too large
+Split Purchase
+Stage buy or timing improves with split
+Delay Purchase
+May be valid later but not now
+Hold Until More Data
+Critical data/evidence missing
+Owner Approval Required
+Threshold, financing, reserve, concentration, strategic exception
+Emergency Review Required
+Urgent service/customer risk with cash risk
+Decline Vendor Offer
+Vendor offer not supported
+Take Partial Vendor Offer
+Only supported portion is recommended
+Take Full Vendor Offer
+Full offer supported and responsible
+16. Execution Boundary and Amount Trail
+IFM funding approval does not mean a PO has been created, sent, received, billed, or paid. Official PO action remains outside IFM in V1.5.
+Amount type
+Meaning
+Requested Amount
+Amount requested by source
+Recommended Funded Amount
+What IFM recommends funding
+Approved Funding Amount
+Reviewer/owner approved funding
+Actual Ordered Amount
+What buyer ordered outside IFM
+Received Amount
+What was received
+AP / Billed Amount
+What became payable
+Paid Amount
+What was paid
+Unfunded Amount
+Not funded now
+Delayed Amount
+Deferred
+Excluded Amount
+Not recommended
+Expired Approval Amount
+Previously approved but no longer valid
+17. Confidence, Overrides, and Re-Review
+Control
+Rule
+Targeted confidence blocking
+Low confidence blocks affected areas, not entire run, unless core funding data is affected
+Reviewer override
+Must preserve original recommendation, final decision, reason, reviewer, date
+Hard safety rules
+Cannot be bypassed by override
+Approval expiration
+Every approval should have expiration/re-review trigger
+Material change triggers
+Cash, AR, AP, PO, vendor terms, financing, RSE class, emergency need changes trigger re-review
+18. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Formulas, logic, source-agnostic treatment, RSE/Keystroke/vendor/financing controls included
+Gaps
+Pass with carry-forward
+Numeric thresholds remain configurable for pilot
+Errors
+Pass
+No-auto-execution and funding/purchase separation clear
+Recommendations
+Included
+Test with Document 7 and keep thresholds configurable
+Ease of use
+Pass
+Tables give implementable rules
+

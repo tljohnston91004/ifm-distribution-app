@@ -1,0 +1,1280 @@
+﻿
+Document 3 - IFM-Distribution V1.5 Data Model and Field Mapping Guide
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Purpose and Data Principle
+This document defines the data backbone for IFM-Distribution V1.5. Cursor and the developer should use it to build database tables, import mapping, validation, source tracking, confidence logic, and calculation input snapshots.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. Source-Agnostic Data Model Rule
+IFM separates IFM standard domains from source systems. A QuickBooks AP Aging report, Sage AP report, NetSuite Open Bills export, or manual AP schedule can all feed the same ap_items table if required fields are mapped and validated.
+Source type options
+Accounting System
+POS System
+ERP System
+WMS / Inventory System
+Banking Source
+Financing Source
+Vendor Source
+RSE Output
+Buyer Worksheet
+Manual Management Entry
+Spreadsheet Upload
+Other
+IFM Data Domain
+Required Fields
+Example Source Documents
+Destination Table
+Cash Position
+Cash balance, source date
+Balance sheet, bank report, cash report, management entry
+cash_positions
+Required Outflows
+Payee/type, amount, due date, required status
+Cash requirements schedule, payroll schedule, tax schedule
+required_outflows
+AP / Bills Due
+Vendor, amount due, due date, aging bucket
+AP aging, open bills, AP schedule
+ap_items
+AR / Expected Inflows
+Customer, amount, due date, confidence
+AR aging, collections report, cash forecast
+ar_items
+Financing Sources
+Source, available amount, approval, cost
+LOC statement, borrowing base, factoring quote
+financing_sources, loc_capacity, factoring_options
+Open POs
+PO number, vendor, open amount, status
+Open PO report, purchasing system export
+open_purchase_orders
+Purchase Candidates
+Vendor, amount, source, need reason, urgency
+Reorder report, RSE output, buyer worksheet, vendor offer
+purchase_candidates
+Inventory Snapshot
+SKU, QOH, cost, inventory value, Min/Max
+Inventory export, item master, WMS report
+inventory_snapshots
+RSE Signals
+SKU, classification, confidence, Min/Max signal
+RSE classification export, approved Min/Max output
+rse_signals
+Keystroke/Other Reorder Source
+Item, vendor, QOH, Min, Max, reorder qty, amount
+Keystroke reorder, ERP reorder, buyer worksheet
+keystroke_reorder_sources or generic reorder source
+Vendor Terms
+Vendor, terms, effective date, payment schedule
+Vendor master, agreement, AP terms sheet
+vendor_terms
+Vendor Offers
+Offer type, terms, expiration, required amount, benefit
+Vendor email, quote, flyer, PDF, buyer entry
+vendor_offers, vendor_offer_items
+Customer Backorders
+Customer, item, quantity, due date, revenue risk
+Backorder report, sales order report, worksheet
+customer_backorders
+Sales / Demand History
+Item, units sold, sales dollars, period
+POS/ERP/e-commerce sales history
+demand_history
+3. Field Requirement Levels and Field Types
+Requirement level
+Meaning
+Effect if missing
+Required
+Needed for core run or responsible decision
+May block run or affected action area
+Strongly Preferred
+Improves decision quality and confidence
+May reduce confidence or create limitation
+Optional
+Helpful context
+Does not block core workflow
+Conditional
+Required only when a feature/source applies
+Blocks affected feature if missing
+Field type
+Use for
+UUID / ID
+System IDs and record links
+Text
+Names, codes, labels
+Long Text
+Notes/explanations
+Enum
+Controlled statuses
+Date
+Review/due/expiration dates
+DateTime
+Upload/export/change timestamps
+Decimal
+Amounts/rates/percentages
+Integer
+Quantities/days/ranks
+Boolean
+Yes/no flags
+4. Controlled Enum Lists
+Run Status
+Draft
+Data Uploaded
+Validation Needed
+Not Ready - Critical Data Missing
+Ready with Limitations
+Ready for Calculation
+Calculation Complete
+Internal Review Needed
+Approved for Customer Output
+Approved with Limitations
+Returned for Data Correction
+Closed
+Archived
+Data Confidence
+High Confidence
+Medium Confidence
+Low Confidence
+Insufficient Data
+Freshness Status
+Current
+Acceptable
+Stale
+Unknown
+Funding Source
+Operating Cash
+Expected AR Collections
+Line of Credit
+Factored Receivables
+Vendor Extended Terms
+Combination Funding
+Not Funded
+Funding Source Unclear
+Funding Status
+Cash Fundable
+Fundable with Expected Inflows
+Fundable with LOC Approval
+Fundable with Factoring Approval
+Fundable with Vendor Terms
+Not Currently Fundable
+Funding Source Unclear
+Recommendation Status
+Recommended
+Recommended with Caution
+Partially Recommended
+Not Recommended
+Hold Until More Data
+Owner Review Required
+Emergency Review Required
+IFM Decision Label
+Approve
+Approve with Caution
+Reduce Order
+Split Purchase
+Delay Purchase
+Hold Until More Data
+Owner Approval Required
+Emergency Review Required
+Decline Vendor Offer
+Take Partial Vendor Offer
+Take Full Vendor Offer
+Open PO Commitment Status
+Purchase Candidate Only
+Draft / Not Sent
+Sent but Changeable
+Vendor Confirmed
+Partially Shipped
+Fully Shipped
+Received but Not Billed
+Billed / AP Created
+Closed
+Export Use Status
+Review Only
+Customer-Facing
+Internal Reviewer Only
+Operational Action Support
+Keystroke Import-Ready
+5. Core Data Domains and Field Tables
+companies
+Field
+Requirement
+Notes
+company_id
+Required
+System ID
+company_name
+Required
+Customer/business name
+business_type
+Strongly Preferred
+Distributor, hybrid, etc.
+pos_system
+Optional
+Example: Keystroke; not required
+accounting_system
+Optional
+Example: QuickBooks; not required
+default_currency
+Required
+Usually USD
+active_status
+Required
+Active/inactive
+ifm_runs
+Field
+Requirement
+Notes
+ifm_run_id
+Required
+System ID
+company_id
+Required
+Company link
+run_name
+Required
+Run label
+review_date
+Required
+Financial snapshot date
+funding_window_start
+Required
+Start date
+funding_window_end
+Required
+End date
+review_cadence
+Required
+Weekly, monthly, on-demand
+run_status
+Required
+Controlled enum
+run_version
+Required
+Version number
+parent_run_id
+Optional
+Prior/revised run link
+source_systems
+Field
+Requirement
+Notes
+source_system_id
+Required
+System ID
+company_id
+Required
+Company link
+source_system_name
+Required
+QuickBooks, Sage, Keystroke, Excel, etc.
+source_system_type
+Required
+Accounting, POS, ERP, WMS, bank, financing, vendor, manual, other
+active_status
+Required
+Active/inactive
+notes
+Optional
+Source notes
+source_documents
+Field
+Requirement
+Notes
+source_document_id
+Required
+System ID
+source_system_id
+Required
+Source system link
+source_document_name
+Required
+AP Aging, Inventory Export, Vendor Offer, etc.
+source_area_or_section
+Strongly Preferred
+Report section/area used
+source_document_type
+Required
+Report, export, worksheet, manual, vendor offer, statement
+source_date
+Strongly Preferred
+Report generation date
+freshness_status
+Required
+Current, acceptable, stale, unknown
+confidence_level
+Required
+High, medium, low, insufficient
+field_mappings
+Field
+Requirement
+Notes
+field_mapping_id
+Required
+System ID
+source_document_id
+Required
+Source document link
+source_field_name
+Required
+Column/field in source
+ifm_domain
+Required
+AP, AR, inventory, etc.
+ifm_table
+Required
+Destination table
+ifm_field_name
+Required
+Destination field
+mapping_required_flag
+Required
+Yes/no
+mapping_confidence
+Required
+High/medium/low/insufficient
+transformation_rule
+Optional
+Date/amount/code cleanup
+validation_status
+Required
+Validated, needs review, failed
+cash_positions
+Field
+Requirement
+Notes
+cash_position_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+cash_as_of_date
+Required
+Cash source date
+cash_on_hand
+Required
+Bank/cash balance
+available_operating_cash
+Strongly Preferred
+Excludes restricted cash
+restricted_cash
+Optional
+Not available for inventory
+data_source
+Required
+Source document/system
+data_confidence
+Required
+Confidence label
+required_outflows
+Field
+Requirement
+Notes
+outflow_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+outflow_type
+Required
+Payroll, rent, taxes, debt, etc.
+vendor_or_payee
+Optional
+Payee
+amount
+Required
+Dollar amount
+due_date
+Required
+Due date
+required_status
+Required
+Must-pay, flexible, unknown
+can_delay
+Strongly Preferred
+Yes/no
+payment_priority
+Strongly Preferred
+Critical/high/normal/low
+data_confidence
+Required
+Confidence label
+ap_items
+Field
+Requirement
+Notes
+ap_item_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+vendor_name
+Required
+Vendor/payee
+invoice_number
+Optional
+Invoice
+amount_due
+Required
+Amount due
+due_date
+Required
+Due date
+invoice_date
+Strongly Preferred
+Invoice date
+aging_bucket
+Strongly Preferred
+Current, 1-30, etc.
+payment_terms
+Strongly Preferred
+Net 30, etc.
+critical_vendor_flag
+Optional
+Yes/no
+related_po_id
+Optional
+PO link
+data_confidence
+Required
+Confidence
+ar_items
+Field
+Requirement
+Notes
+ar_item_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+customer_name
+Strongly Preferred
+Customer
+invoice_number
+Optional
+Invoice
+expected_amount
+Required
+Expected receipt
+expected_collection_date
+Required
+Expected date
+collection_confidence
+Required
+High/medium/low
+included_in_core_funding
+Required
+Yes/no
+factored_flag
+Required
+Yes/no
+factoring_source_id
+Conditional
+Required if factored
+data_confidence
+Required
+Confidence
+financing_sources
+Field
+Requirement
+Notes
+financing_source_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+funding_source_type
+Required
+LOC, factoring, other
+source_name
+Strongly Preferred
+Bank/factor/source
+available_amount
+Required
+Available capacity
+approved_for_inventory_amount
+Required
+Management-approved amount
+estimated_cost
+Strongly Preferred
+Interest/fee
+expected_funding_date
+Conditional
+Timing
+approval_required
+Required
+Yes/no
+approval_owner
+Conditional
+If approval required
+risk_note
+Strongly Preferred
+Plain-English note
+loc_capacity
+Field
+Requirement
+Notes
+loc_capacity_id
+Required
+System ID
+financing_source_id
+Required
+Financing source link
+loc_limit
+Required
+Total line
+current_balance_drawn
+Required
+Current drawn
+remaining_availability
+Required
+Remaining availability
+borrowing_base_limit
+Optional
+If applicable
+management_draw_limit
+Strongly Preferred
+Inventory draw limit
+interest_rate
+Optional
+Cost
+loc_status
+Required
+Available, limited, unavailable, unknown
+factoring_options
+Field
+Requirement
+Notes
+factoring_option_id
+Required
+System ID
+financing_source_id
+Required
+Financing source link
+eligible_ar_amount
+Required
+Eligible AR
+advance_rate
+Required
+Advance rate
+factoring_fee
+Required
+Fee
+reserve_holdback
+Strongly Preferred
+Holdback
+expected_net_proceeds
+Required
+Net usable cash
+expected_funding_date
+Required
+Date
+factored_ar_ids
+Strongly Preferred
+AR links
+factoring_status
+Required
+Available, pending, unavailable, unknown
+vendors
+Field
+Requirement
+Notes
+vendor_id
+Required
+System ID
+company_id
+Required
+Company link
+vendor_name
+Required
+Vendor
+vendor_code
+Strongly Preferred
+Source code
+standard_terms
+Strongly Preferred
+Default terms
+critical_vendor_flag
+Optional
+Yes/no
+strategic_vendor_flag
+Optional
+Yes/no
+default_lead_time_days
+Optional
+Lead time
+vendor_status
+Required
+Active/inactive
+vendor_terms
+Field
+Requirement
+Notes
+vendor_terms_id
+Required
+System ID
+vendor_id
+Required
+Vendor link
+normal_terms
+Required
+Standard terms
+special_terms
+Optional
+Special terms
+terms_start_date
+Optional
+Start
+terms_end_date
+Optional
+End
+payment_schedule
+Strongly Preferred
+30/60/90, etc.
+early_pay_discount
+Optional
+Discount
+terms_confidence
+Required
+Confidence
+terms_source
+Required
+Source
+purchase_candidates
+Field
+Requirement
+Notes
+purchase_candidate_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+source_of_request
+Required
+RSE, reorder, buyer, backorder, vendor offer, etc.
+vendor_name
+Required
+Vendor
+sku_or_item_id
+Conditional
+For SKU-level candidate
+category_or_group
+Optional
+Group-level buy
+proposed_quantity
+Strongly Preferred
+Quantity
+estimated_unit_cost
+Strongly Preferred
+Cost
+estimated_total_cost
+Required
+Funding request
+need_reason
+Required
+Replenishment, promo, emergency, etc.
+supporting_evidence
+Strongly Preferred
+Evidence
+urgency_level
+Required
+Low/medium/high/emergency
+requested_by
+Strongly Preferred
+User
+data_confidence
+Required
+Confidence
+purchase_candidate_sources
+Field
+Requirement
+Notes
+source_record_id
+Required
+System ID
+purchase_candidate_id
+Required
+Candidate link
+source_type
+Required
+RSE, reorder, buyer, backorder, vendor offer
+source_reference_id
+Optional
+Source record link
+evidence_strength
+Required
+Strong/moderate/weak/unsupported
+source_confidence
+Required
+Confidence
+source_note
+Optional
+Explanation
+evidence_gap
+Optional
+Missing support
+keystroke_reorder_sources
+Field
+Requirement
+Notes
+reorder_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+purchase_candidate_id
+Conditional
+Candidate link
+export_date
+Required
+Source date
+vendor_code
+Strongly Preferred
+Source vendor code
+item_code
+Strongly Preferred
+Source item code
+quantity_on_hand
+Strongly Preferred
+QOH
+min_qty
+Strongly Preferred
+Min
+max_qty
+Strongly Preferred
+Max
+reorder_qty
+Strongly Preferred
+Suggested quantity
+suggested_order_amount
+Strongly Preferred
+Estimated cost
+data_confidence
+Required
+Confidence
+open_purchase_orders
+Field
+Requirement
+Notes
+open_po_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+po_number
+Required
+PO number
+vendor_name
+Required
+Vendor
+po_date
+Required
+Date
+expected_receipt_date
+Strongly Preferred
+Receipt date
+original_po_amount
+Required
+Original amount
+remaining_open_amount
+Required
+Open amount
+commitment_status
+Required
+Draft, sent, confirmed, shipped, received, billed, closed
+changeable_flag
+Strongly Preferred
+Yes/no/unknown
+cash_exposure_amount
+Required
+Exposure
+related_ap_item_id
+Optional
+AP link
+inventory_snapshots
+Field
+Requirement
+Notes
+inventory_snapshot_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+sku_or_item_id
+Required
+Item
+vendor_name
+Strongly Preferred
+Vendor
+location
+Optional
+Warehouse/location
+quantity_on_hand
+Required
+QOH
+unit_cost
+Strongly Preferred
+Cost
+inventory_value
+Required
+Value
+min_qty
+Strongly Preferred
+Min
+max_qty
+Strongly Preferred
+Max
+weeks_of_supply
+Optional
+Weeks
+slow_moving_flag
+Strongly Preferred
+Yes/no
+overstock_flag
+Strongly Preferred
+Yes/no
+stockout_risk_flag
+Strongly Preferred
+Yes/no
+rse_signals
+Field
+Requirement
+Notes
+rse_signal_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+sku_or_item_id
+Required
+Item
+vendor_name
+Optional
+Vendor
+rse_classification
+Required if available
+Class
+classification_confidence
+Required if available
+Confidence
+rse_replenishment_signal
+Strongly Preferred
+Increase/reduce/hold/protect
+recommended_min
+Optional
+RSE Min
+recommended_max
+Optional
+RSE Max
+below_min_flag
+Optional
+Yes/no
+above_max_flag
+Optional
+Yes/no
+demand_support_level
+Strongly Preferred
+Strong/moderate/weak
+rse_run_id
+Optional
+Source run
+vendor_offers
+Field
+Requirement
+Notes
+vendor_offer_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+vendor_name
+Required
+Vendor
+offer_name
+Required
+Description
+offer_type
+Required
+Discount, terms, free freight, MOQ, rebate
+offer_expiration_date
+Strongly Preferred
+Expiration
+normal_terms
+Strongly Preferred
+Baseline
+promotional_terms
+Strongly Preferred
+Promo terms
+minimum_order_dollars
+Conditional
+If applicable
+discount_percentage
+Conditional
+If applicable
+required_order_amount
+Strongly Preferred
+Amount to qualify
+normal_needed_purchase_amount
+Strongly Preferred
+Supported need
+incremental_purchase_amount
+Strongly Preferred
+Extra amount
+expected_sell_through_period
+Strongly Preferred
+Timing
+offer_status
+Required
+New/review/approved/partial/declined/expired
+data_confidence
+Required
+Confidence
+funding_calculations
+Field
+Requirement
+Notes
+funding_calculation_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+cash_on_hand
+Required
+Cash
+confident_expected_inflows
+Required
+Included inflows
+protected_cash_reserve
+Required
+Reserve
+required_outflows_total
+Required
+Outflows
+ap_pressure_total
+Required
+AP
+open_po_exposure_total
+Required
+PO exposure
+core_available_inventory_funding
+Required
+Layer 1 result
+supplemental_funding_capacity
+Required
+Layer 2 result
+total_potential_inventory_funding
+Required
+Layer 3 result
+funding_confidence
+Required
+Confidence
+calculation_version
+Required
+Version
+locked_flag
+Required
+Yes/no
+funding_allocations
+Field
+Requirement
+Notes
+allocation_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+purchase_candidate_id
+Required
+Candidate
+funding_bucket
+Required
+Must-fund, replenishment, promo, holdback, delayed
+requested_amount
+Required
+Request
+allocated_amount
+Required
+Recommended funded
+unfunded_amount
+Required
+Remaining
+allocation_priority
+Required
+Rank
+allocation_reason
+Required
+Reason
+funding_source
+Required
+Cash, AR, LOC, factoring, terms, combo
+confidence_level
+Required
+Confidence
+purchase_decisions
+Field
+Requirement
+Notes
+decision_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+purchase_candidate_id
+Required
+Candidate
+system_decision_label
+Required
+Approve, reduce, split, etc.
+funding_status
+Required
+Can fund status
+recommendation_status
+Required
+Should fund status
+approved_amount
+Required
+Could be zero
+delayed_amount
+Required
+Could be zero
+excluded_amount
+Required
+Could be zero
+owner_approval_required
+Required
+Yes/no
+financing_approval_required
+Required
+Yes/no
+decision_reason
+Required
+Plain-English reason
+confidence_level
+Required
+Confidence
+decision_status
+Required
+System/reviewer/owner status
+data_gaps
+Field
+Requirement
+Notes
+data_gap_id
+Required
+System ID
+ifm_run_id
+Required
+Run link
+affected_domain
+Required
+Cash, AP, AR, vendor offer, etc.
+affected_decision
+Optional
+Decision impacted
+gap_description
+Required
+What is missing/unreliable
+severity
+Required
+Minor, confidence limiter, decision limiter, critical blocker
+blocking_status
+Required
+Blocking/partial/non-blocking
+required_fix
+Required
+What is needed
+owner
+Strongly Preferred
+Owner
+status
+Required
+Open/in progress/resolved/waived
+confidence_impact
+Required
+Impact
+6. Minimum Viable IFM Run Data
+Data area
+Requirement
+Notes
+Review date
+Required
+Financial snapshot date
+Funding window
+Required
+Usually next 30 days
+Cash on hand
+Required
+Starting cash
+Cash reserve setting
+Required
+Protected reserve
+Required outflows
+Required or confirmed none
+Must-pay obligations
+AP / bills due
+Required or confirmed none
+Vendor payable pressure
+AR / expected inflows
+Required if used
+Confidence adjusted
+Open PO exposure
+Required or confirmed none
+Prevents double spending
+Purchase candidate or open PO
+Required
+IFM needs something to review
+Estimated purchase amount
+Required
+Funding request
+Vendor
+Required
+Supplier
+Purchase source
+Required
+RSE, reorder, buyer, offer, etc.
+Need reason
+Required
+Replenishment/backorder/promo/etc.
+Data confidence
+Required
+Decision confidence label
+7. Confirmed-None-Exist and Source-of-Truth Rules
+Rule
+Required fields / behavior
+Blank data is not zero
+Use no_records_confirmed_flag, confirmed_by, confirmation_date, confirmation_note, confirmation_confidence
+Source-of-truth hierarchy
+Reviewer-approved override; current source-system export; current uploaded report; prior validated data; manual assumption; unknown/unsupported
+Conflict treatment
+Flag conflict, reduce confidence, require reviewer source selection, preserve both values, use approved source only
+Manual assumption expiration
+Expired assumptions cannot be used unless reapproved
+8. Data Freshness and Source Evidence Standards
+Data area
+Freshness standard
+Cash position
+Same day or prior business day
+AP / AR
+Usually current within 7 days
+Open PO exposure
+Usually current within 7 days
+Inventory snapshot
+Usually current within 7 days
+Reorder suggestions
+Current review period
+RSE classifications
+Must show RSE run date
+Vendor offers
+Valid expiration date or reviewed status
+LOC/factoring
+Current within 7 days or per quote
+Source evidence field
+Requirement
+source_system
+Required where imported
+source_document_name
+Required where imported
+source_area_or_section
+Strongly Preferred
+source_file_name
+Strongly Preferred
+source_report_date
+Strongly Preferred
+uploaded_by
+Strongly Preferred
+upload_batch_id
+Optional
+source_confidence
+Required
+source_freshness_status
+Required
+9. Calculation Lock, Run Revision, and Output Visibility
+Control
+Required behavior
+Calculation lock
+Approved outputs should lock; changes create revised calculation/run/output
+Run revision
+Preserve parent_run_id, run_version, revision_reason, revised_by, revised_date
+Visibility categories
+Customer Visible, Internal Reviewer Only, Developer/Admin Only, Sensitive - Requires Approval, Suppressed
+Sensitive data control
+Bank, LOC, factoring, AR/AP detail, reviewer notes, formulas, diagnostics are internal unless approved
+10. First-Build Table Scope
+Build phase
+Tables/domains
+Build First
+companies, ifm_runs, review_settings, saved_assumptions, source_systems, source_documents, field_mappings, cash_positions, required_outflows, ap_items, ar_items, financing_sources, loc_capacity, factoring_options, vendors, vendor_terms, purchase_candidates, purchase_candidate_sources, open_purchase_orders, inventory_snapshots, rse_signals, reorder_sources, funding_calculations, supplemental_funding_calculations, funding_allocations, purchase_decisions, data_gaps, reviewer_notes, export_logs, change_logs
+Build Second
+demand_history, customer_backorders, vendor_offers, vendor_offer_items, cash_conversion_timing, scenario_comparisons, approval_expiration_reviews, buyer_override_requests, action_tracker
+Build Third
+upload_batches, item_cross_reference, vendor_cross_reference, calculation_input_snapshots, received_payable_purchases, proposed_purchase_orders, funding_follow_up, keystroke_export_files
+11. Plain-English Glossary
+Term
+Meaning
+IFM Run
+One funding review at a specific date and funding window
+Funding Window
+Period being evaluated, often next 30 days
+Core Available Inventory Funding
+Cash-supported inventory buying capacity
+Supplemental Funding Capacity
+Approved LOC/factoring/other capacity
+Purchase Candidate
+Possible purchase before official PO
+Fundable
+Company can technically pay/finance
+Recommended
+IFM believes purchase is responsible
+Open PO Exposure
+Existing purchase commitments likely to become cash obligations
+Cash Conversion Timing
+Whether inventory will sell/collect before payment due
+Data Gap
+Missing/unreliable data affecting confidence or decision
+Keystroke Import-Ready
+Tab-delimited .txt file validated for Keystroke import/re-import
+12. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Full domains, fields, source mapping, validation, confidence, audit and visibility controls included
+Gaps
+Pass with carry-forward
+Exact pilot source columns depend on real files
+Errors
+Pass
+Source-agnostic and Keystroke-specific rules are separated
+Recommendations
+Included
+Build in phases and keep mapping flexible
+Ease of use
+Pass
+Tables support Cursor/developer implementation
+

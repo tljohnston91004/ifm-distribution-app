@@ -1,0 +1,609 @@
+// IFM — Inventory Funding Manager (Distribution) V1.5
+// Stage 2 data model. Tables follow Document 3 §5 (field tables) and §10 (Build First scope).
+// Controlled enum values (Document 3 §4) are stored as String and validated in
+// src/lib/ifm/enums.ts (SQLite + Prisma has no native enum, matching the RSE app).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Org + run
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Company {
+  id              String   @id @default(uuid()) @map("company_id")
+  companyName     String   @map("company_name")
+  businessType    String?  @map("business_type")
+  posSystem       String?  @map("pos_system")
+  accountingSystem String? @map("accounting_system")
+  defaultCurrency String   @default("USD") @map("default_currency")
+  activeStatus    Boolean  @default(true) @map("active_status")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  runs           IfmRun[]
+  sourceSystems  SourceSystem[]
+  vendors        Vendor[]
+  reviewSettings ReviewSettings[]
+  assumptions    SavedAssumption[]
+
+  @@map("companies")
+}
+
+model IfmRun {
+  id                String    @id @default(uuid()) @map("ifm_run_id")
+  companyId         String    @map("company_id")
+  company           Company   @relation(fields: [companyId], references: [id])
+  runName           String    @map("run_name")
+  reviewDate        DateTime  @map("review_date")
+  fundingWindowStart DateTime @map("funding_window_start")
+  fundingWindowEnd   DateTime @map("funding_window_end")
+  reviewCadence     String    @default("on-demand") @map("review_cadence") // weekly | monthly | on-demand
+  runStatus         String    @default("Draft") @map("run_status") // Document 3 §4 Run Status
+  runVersion        Int       @default(1) @map("run_version")
+  parentRunId       String?   @map("parent_run_id")
+  revisionReason    String?   @map("revision_reason")
+  revisedBy         String?   @map("revised_by")
+  revisedDate       DateTime? @map("revised_date")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  createdBy         String    @default("pilot-user") @map("created_by")
+
+  cashPositions       CashPosition[]
+  requiredOutflows    RequiredOutflow[]
+  apItems             ApItem[]
+  arItems             ArItem[]
+  financingSources    FinancingSource[]
+  purchaseCandidates  PurchaseCandidate[]
+  openPurchaseOrders  OpenPurchaseOrder[]
+  inventorySnapshots  InventorySnapshot[]
+  rseSignals          RseSignal[]
+  reorderSources      ReorderSource[]
+  vendorOffers        VendorOffer[]
+  fundingCalculation  FundingCalculation?
+  supplementalCalc    SupplementalFundingCalculation?
+  fundingAllocations  FundingAllocation[]
+  purchaseDecisions   PurchaseDecision[]
+  dataGaps            DataGap[]
+  reviewerNotes       ReviewerNote[]
+  exportLogs          ExportLog[]
+  changeLogs          ChangeLog[]
+
+  @@map("ifm_runs")
+}
+
+// Configurable thresholds (Document 2 §11 / Document 4 §17). Per-company defaults a run can override.
+model ReviewSettings {
+  id                       String   @id @default(uuid()) @map("review_settings_id")
+  companyId                String   @map("company_id")
+  company                  Company  @relation(fields: [companyId], references: [id])
+  protectedCashReserve     Float    @default(0) @map("protected_cash_reserve")
+  ownerApprovalThreshold   Float    @default(25000) @map("owner_approval_threshold")
+  materialPurchaseAmount   Float    @default(5000) @map("material_purchase_amount")
+  arHighConfidenceFactor   Float    @default(1.0) @map("ar_high_confidence_factor")
+  arMediumConfidenceFactor Float    @default(0.6) @map("ar_medium_confidence_factor") // Document 7 uses 60%
+  arLowConfidenceFactor    Float    @default(0.2) @map("ar_low_confidence_factor")    // Document 7 uses 20%
+  vendorConcentrationLimit Float    @default(0.35) @map("vendor_concentration_limit")
+  emergencyHoldbackAmount  Float    @default(0) @map("emergency_holdback_amount")
+  holdbackPercent          Float    @default(0.10) @map("holdback_percent")
+  approvalExpirationDays   Int      @default(7) @map("approval_expiration_days")
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  @@map("review_settings")
+}
+
+// Manual management assumptions with expiration (Document 3 §7).
+model SavedAssumption {
+  id                String    @id @default(uuid()) @map("assumption_id")
+  companyId         String    @map("company_id")
+  company           Company   @relation(fields: [companyId], references: [id])
+  assumptionDomain  String    @map("assumption_domain")
+  assumptionValue   String    @map("assumption_value")
+  rationale         String?
+  approvedBy        String?   @map("approved_by")
+  approvedDate      DateTime? @map("approved_date")
+  expirationDate    DateTime? @map("expiration_date")
+  confidenceLevel   String    @default("Medium Confidence") @map("confidence_level")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@map("saved_assumptions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Source intake (source-agnostic)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SourceSystem {
+  id               String           @id @default(uuid()) @map("source_system_id")
+  companyId        String           @map("company_id")
+  company          Company          @relation(fields: [companyId], references: [id])
+  sourceSystemName String           @map("source_system_name")
+  sourceSystemType String           @map("source_system_type") // Document 3 §2 source type options
+  activeStatus     Boolean          @default(true) @map("active_status")
+  notes            String?
+  createdAt        DateTime         @default(now()) @map("created_at")
+  documents        SourceDocument[]
+
+  @@map("source_systems")
+}
+
+model SourceDocument {
+  id                  String         @id @default(uuid()) @map("source_document_id")
+  sourceSystemId      String         @map("source_system_id")
+  sourceSystem        SourceSystem   @relation(fields: [sourceSystemId], references: [id])
+  sourceDocumentName  String         @map("source_document_name")
+  sourceAreaOrSection String?        @map("source_area_or_section")
+  sourceDocumentType  String         @map("source_document_type")
+  sourceDate          DateTime?      @map("source_date")
+  freshnessStatus     String         @default("Unknown") @map("freshness_status") // Document 3 §4 Freshness Status
+  confidenceLevel     String         @default("Medium Confidence") @map("confidence_level") // Document 3 §4 Data Confidence
+  createdAt           DateTime       @default(now()) @map("created_at")
+  fieldMappings       FieldMapping[]
+
+  @@map("source_documents")
+}
+
+model FieldMapping {
+  id                 String         @id @default(uuid()) @map("field_mapping_id")
+  sourceDocumentId   String         @map("source_document_id")
+  sourceDocument     SourceDocument @relation(fields: [sourceDocumentId], references: [id])
+  sourceFieldName    String         @map("source_field_name")
+  ifmDomain          String         @map("ifm_domain")
+  ifmTable           String         @map("ifm_table")
+  ifmFieldName       String         @map("ifm_field_name")
+  mappingRequiredFlag Boolean       @default(false) @map("mapping_required_flag")
+  mappingConfidence  String         @default("Medium Confidence") @map("mapping_confidence")
+  transformationRule String?        @map("transformation_rule")
+  validationStatus   String         @default("needs review") @map("validation_status") // validated | needs review | failed
+  createdAt          DateTime       @default(now()) @map("created_at")
+
+  @@map("field_mappings")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Financial snapshot inputs
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CashPosition {
+  id                    String   @id @default(uuid()) @map("cash_position_id")
+  ifmRunId              String   @map("ifm_run_id")
+  run                   IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  cashAsOfDate          DateTime @map("cash_as_of_date")
+  cashOnHand            Float    @map("cash_on_hand")
+  availableOperatingCash Float?  @map("available_operating_cash")
+  restrictedCash        Float?   @map("restricted_cash")
+  dataSource            String   @map("data_source")
+  dataConfidence        String   @default("Medium Confidence") @map("data_confidence")
+
+  @@map("cash_positions")
+}
+
+model RequiredOutflow {
+  id              String   @id @default(uuid()) @map("outflow_id")
+  ifmRunId        String   @map("ifm_run_id")
+  run             IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  outflowType     String   @map("outflow_type") // payroll | rent | taxes | debt | other
+  vendorOrPayee   String?  @map("vendor_or_payee")
+  amount          Float
+  dueDate         DateTime @map("due_date")
+  requiredStatus  String   @default("must-pay") @map("required_status") // must-pay | flexible | unknown
+  canDelay        Boolean? @map("can_delay")
+  paymentPriority String?  @map("payment_priority") // critical | high | normal | low
+  dataConfidence  String   @default("Medium Confidence") @map("data_confidence")
+
+  @@map("required_outflows")
+}
+
+model ApItem {
+  id              String    @id @default(uuid()) @map("ap_item_id")
+  ifmRunId        String    @map("ifm_run_id")
+  run             IfmRun    @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  vendorName      String    @map("vendor_name")
+  invoiceNumber   String?   @map("invoice_number")
+  amountDue       Float     @map("amount_due")
+  dueDate         DateTime  @map("due_date")
+  invoiceDate     DateTime? @map("invoice_date")
+  agingBucket     String?   @map("aging_bucket") // Current | 1-30 | 31-60 | 61-90 | 90+
+  paymentTerms    String?   @map("payment_terms")
+  criticalVendorFlag Boolean @default(false) @map("critical_vendor_flag")
+  relatedPoId     String?   @map("related_po_id")
+  dataConfidence  String    @default("Medium Confidence") @map("data_confidence")
+
+  @@map("ap_items")
+}
+
+model ArItem {
+  id                    String   @id @default(uuid()) @map("ar_item_id")
+  ifmRunId              String   @map("ifm_run_id")
+  run                   IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  customerName          String?  @map("customer_name")
+  invoiceNumber         String?  @map("invoice_number")
+  expectedAmount        Float    @map("expected_amount")
+  expectedCollectionDate DateTime @map("expected_collection_date")
+  collectionConfidence  String   @default("Medium Confidence") @map("collection_confidence") // High | Medium | Low
+  includedInCoreFunding Boolean  @default(true) @map("included_in_core_funding")
+  factoredFlag          Boolean  @default(false) @map("factored_flag")
+  factoringSourceId     String?  @map("factoring_source_id")
+  dataConfidence        String   @default("Medium Confidence") @map("data_confidence")
+
+  @@map("ar_items")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Financing
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FinancingSource {
+  id                       String   @id @default(uuid()) @map("financing_source_id")
+  ifmRunId                 String   @map("ifm_run_id")
+  run                      IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  fundingSourceType        String   @map("funding_source_type") // LOC | factoring | other
+  sourceName               String?  @map("source_name")
+  availableAmount          Float    @map("available_amount")
+  approvedForInventoryAmount Float  @map("approved_for_inventory_amount")
+  estimatedCost            Float?   @map("estimated_cost")
+  expectedFundingDate      DateTime? @map("expected_funding_date")
+  approvalRequired         Boolean  @default(true) @map("approval_required")
+  approvalOwner            String?  @map("approval_owner")
+  riskNote                 String?  @map("risk_note")
+
+  locCapacity      LocCapacity?
+  factoringOption  FactoringOption?
+
+  @@map("financing_sources")
+}
+
+model LocCapacity {
+  id                   String          @id @default(uuid()) @map("loc_capacity_id")
+  financingSourceId    String          @unique @map("financing_source_id")
+  financingSource      FinancingSource @relation(fields: [financingSourceId], references: [id], onDelete: Cascade)
+  locLimit             Float           @map("loc_limit")
+  currentBalanceDrawn  Float           @map("current_balance_drawn")
+  remainingAvailability Float          @map("remaining_availability")
+  borrowingBaseLimit   Float?          @map("borrowing_base_limit")
+  managementDrawLimit  Float?          @map("management_draw_limit")
+  interestRate         Float?          @map("interest_rate")
+  locStatus            String          @default("unknown") @map("loc_status") // available | limited | unavailable | unknown
+
+  @@map("loc_capacity")
+}
+
+model FactoringOption {
+  id                  String          @id @default(uuid()) @map("factoring_option_id")
+  financingSourceId   String          @unique @map("financing_source_id")
+  financingSource     FinancingSource @relation(fields: [financingSourceId], references: [id], onDelete: Cascade)
+  eligibleArAmount    Float           @map("eligible_ar_amount")
+  advanceRate         Float           @map("advance_rate")
+  factoringFee        Float           @map("factoring_fee")
+  reserveHoldback     Float?          @map("reserve_holdback")
+  expectedNetProceeds Float           @map("expected_net_proceeds")
+  expectedFundingDate DateTime?       @map("expected_funding_date")
+  factoredArIds       String?         @map("factored_ar_ids")
+  factoringStatus     String          @default("unknown") @map("factoring_status") // available | pending | unavailable | unknown
+
+  @@map("factoring_options")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vendors
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Vendor {
+  id                 String       @id @default(uuid()) @map("vendor_id")
+  companyId          String       @map("company_id")
+  company            Company      @relation(fields: [companyId], references: [id])
+  vendorName         String       @map("vendor_name")
+  vendorCode         String?      @map("vendor_code")
+  standardTerms      String?      @map("standard_terms")
+  criticalVendorFlag Boolean      @default(false) @map("critical_vendor_flag")
+  strategicVendorFlag Boolean     @default(false) @map("strategic_vendor_flag")
+  defaultLeadTimeDays Int?        @map("default_lead_time_days")
+  vendorStatus       String       @default("active") @map("vendor_status")
+  terms              VendorTerm[]
+
+  @@map("vendors")
+}
+
+model VendorTerm {
+  id              String    @id @default(uuid()) @map("vendor_terms_id")
+  vendorId        String    @map("vendor_id")
+  vendor          Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  normalTerms     String    @map("normal_terms")
+  specialTerms    String?   @map("special_terms")
+  termsStartDate  DateTime? @map("terms_start_date")
+  termsEndDate    DateTime? @map("terms_end_date")
+  paymentSchedule String?   @map("payment_schedule")
+  earlyPayDiscount Float?   @map("early_pay_discount")
+  termsConfidence String    @default("Medium Confidence") @map("terms_confidence")
+  termsSource     String    @map("terms_source")
+
+  @@map("vendor_terms")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Purchase candidates + evidence
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PurchaseCandidate {
+  id                 String   @id @default(uuid()) @map("purchase_candidate_id")
+  ifmRunId           String   @map("ifm_run_id")
+  run                IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  sourceOfRequest    String   @map("source_of_request") // RSE | reorder | buyer | backorder | vendor offer | ...
+  vendorName         String   @map("vendor_name")
+  skuOrItemId        String?  @map("sku_or_item_id")
+  categoryOrGroup    String?  @map("category_or_group")
+  proposedQuantity   Float?   @map("proposed_quantity")
+  estimatedUnitCost  Float?   @map("estimated_unit_cost")
+  estimatedTotalCost Float    @map("estimated_total_cost")
+  needReason         String   @map("need_reason") // replenishment | promo | emergency | backorder | ...
+  supportingEvidence String?  @map("supporting_evidence")
+  urgencyLevel       String   @default("medium") @map("urgency_level") // low | medium | high | emergency
+  requestedBy        String?  @map("requested_by")
+  dataConfidence     String   @default("Medium Confidence") @map("data_confidence")
+
+  sources     PurchaseCandidateSource[]
+  allocations FundingAllocation[]
+  decisions   PurchaseDecision[]
+  vendorOffer VendorOffer?
+
+  @@map("purchase_candidates")
+}
+
+// Vendor Offer / Promo-Buy (Document 3 vendor_offers, Document 4 §11). One per candidate here.
+model VendorOffer {
+  id                          String             @id @default(uuid()) @map("vendor_offer_id")
+  ifmRunId                    String             @map("ifm_run_id")
+  run                         IfmRun             @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  purchaseCandidateId         String?            @unique @map("purchase_candidate_id")
+  candidate                   PurchaseCandidate? @relation(fields: [purchaseCandidateId], references: [id], onDelete: SetNull)
+  vendorName                  String             @map("vendor_name")
+  offerName                   String             @map("offer_name")
+  offerType                   String             @map("offer_type") // discount | terms | free freight | MOQ | rebate
+  offerExpirationDate         DateTime?          @map("offer_expiration_date")
+  requiredOrderAmount         Float              @map("required_order_amount")
+  normalNeededPurchaseAmount  Float              @map("normal_needed_purchase_amount")
+  incrementalPurchaseAmount   Float              @map("incremental_purchase_amount")
+  discountTermsFreightBenefit String?            @map("discount_terms_freight_benefit")
+  expectedSellThroughPeriod   String?            @map("expected_sell_through_period")
+  rseClassificationMix        String?            @map("rse_classification_mix")
+  offerStatus                 String             @default("New") @map("offer_status") // New | review | approved | partial | declined | expired
+  dataConfidence              String             @default("Medium Confidence") @map("data_confidence")
+
+  @@map("vendor_offers")
+}
+
+model PurchaseCandidateSource {
+  id                  String            @id @default(uuid()) @map("source_record_id")
+  purchaseCandidateId String            @map("purchase_candidate_id")
+  candidate           PurchaseCandidate @relation(fields: [purchaseCandidateId], references: [id], onDelete: Cascade)
+  sourceType          String            @map("source_type") // RSE | reorder | buyer | backorder | vendor offer
+  sourceReferenceId   String?           @map("source_reference_id")
+  evidenceStrength    String            @default("moderate") @map("evidence_strength") // strong | moderate | weak | unsupported
+  sourceConfidence    String            @default("Medium Confidence") @map("source_confidence")
+  sourceNote          String?           @map("source_note")
+  evidenceGap         String?           @map("evidence_gap")
+
+  @@map("purchase_candidate_sources")
+}
+
+model ReorderSource {
+  id                  String    @id @default(uuid()) @map("reorder_id")
+  ifmRunId            String    @map("ifm_run_id")
+  run                 IfmRun    @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  purchaseCandidateId String?   @map("purchase_candidate_id")
+  exportDate          DateTime  @map("export_date")
+  vendorCode          String?   @map("vendor_code")
+  itemCode            String?   @map("item_code")
+  quantityOnHand      Float?    @map("quantity_on_hand")
+  minQty              Float?    @map("min_qty")
+  maxQty              Float?    @map("max_qty")
+  reorderQty          Float?    @map("reorder_qty")
+  suggestedOrderAmount Float?   @map("suggested_order_amount")
+  dataConfidence      String    @default("Medium Confidence") @map("data_confidence")
+
+  @@map("reorder_sources")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Open POs + inventory + RSE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model OpenPurchaseOrder {
+  id                  String   @id @default(uuid()) @map("open_po_id")
+  ifmRunId            String   @map("ifm_run_id")
+  run                 IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  poNumber            String   @map("po_number")
+  vendorName          String   @map("vendor_name")
+  poDate              DateTime @map("po_date")
+  expectedReceiptDate DateTime? @map("expected_receipt_date")
+  originalPoAmount    Float    @map("original_po_amount")
+  remainingOpenAmount Float    @map("remaining_open_amount")
+  commitmentStatus    String   @default("Draft / Not Sent") @map("commitment_status") // Document 3 §4 Open PO Commitment Status
+  changeableFlag      String?  @map("changeable_flag") // yes | no | unknown
+  cashExposureAmount  Float    @map("cash_exposure_amount")
+  relatedApItemId     String?  @map("related_ap_item_id")
+
+  @@map("open_purchase_orders")
+}
+
+model InventorySnapshot {
+  id              String   @id @default(uuid()) @map("inventory_snapshot_id")
+  ifmRunId        String   @map("ifm_run_id")
+  run             IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  skuOrItemId     String   @map("sku_or_item_id")
+  vendorName      String?  @map("vendor_name")
+  location        String?
+  quantityOnHand  Float    @map("quantity_on_hand")
+  unitCost        Float?   @map("unit_cost")
+  inventoryValue  Float    @map("inventory_value")
+  minQty          Float?   @map("min_qty")
+  maxQty          Float?   @map("max_qty")
+  weeksOfSupply   Float?   @map("weeks_of_supply")
+  slowMovingFlag  Boolean  @default(false) @map("slow_moving_flag")
+  overstockFlag   Boolean  @default(false) @map("overstock_flag")
+  stockoutRiskFlag Boolean @default(false) @map("stockout_risk_flag")
+
+  @@map("inventory_snapshots")
+}
+
+model RseSignal {
+  id                     String   @id @default(uuid()) @map("rse_signal_id")
+  ifmRunId               String   @map("ifm_run_id")
+  run                    IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  skuOrItemId            String   @map("sku_or_item_id")
+  vendorName             String?  @map("vendor_name")
+  rseClassification      String?  @map("rse_classification") // fast | moderate | seasonal | slow | overstock | none
+  classificationConfidence String? @map("classification_confidence")
+  rseReplenishmentSignal String?  @map("rse_replenishment_signal") // increase | reduce | hold | protect
+  recommendedMin         Float?   @map("recommended_min")
+  recommendedMax         Float?   @map("recommended_max")
+  belowMinFlag           Boolean? @map("below_min_flag")
+  aboveMaxFlag           Boolean? @map("above_max_flag")
+  demandSupportLevel     String?  @map("demand_support_level") // strong | moderate | weak
+  rseRunId               String?  @map("rse_run_id")
+
+  @@map("rse_signals")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Calculation outputs
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FundingCalculation {
+  id                          String   @id @default(uuid()) @map("funding_calculation_id")
+  ifmRunId                    String   @unique @map("ifm_run_id")
+  run                         IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  cashOnHand                  Float    @map("cash_on_hand")
+  confidentExpectedInflows    Float    @map("confident_expected_inflows")
+  protectedCashReserve        Float    @map("protected_cash_reserve")
+  requiredOutflowsTotal       Float    @map("required_outflows_total")
+  apPressureTotal             Float    @map("ap_pressure_total")
+  openPoExposureTotal         Float    @map("open_po_exposure_total")
+  coreAvailableInventoryFunding Float  @map("core_available_inventory_funding")
+  supplementalFundingCapacity Float    @map("supplemental_funding_capacity")
+  totalPotentialInventoryFunding Float @map("total_potential_inventory_funding")
+  fundingConfidence           String   @default("Medium Confidence") @map("funding_confidence")
+  calculationVersion          Int      @default(1) @map("calculation_version")
+  lockedFlag                  Boolean  @default(false) @map("locked_flag")
+  createdAt                   DateTime @default(now()) @map("created_at")
+
+  @@map("funding_calculations")
+}
+
+model SupplementalFundingCalculation {
+  id                       String   @id @default(uuid()) @map("supplemental_funding_calculation_id")
+  ifmRunId                 String   @unique @map("ifm_run_id")
+  run                      IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  approvedLocCapacity      Float    @map("approved_loc_capacity")
+  approvedNetFactoring     Float    @map("approved_net_factoring")
+  otherApprovedFunding     Float    @map("other_approved_funding")
+  supplementalFundingCapacity Float @map("supplemental_funding_capacity")
+  fundingConfidence        String   @default("Medium Confidence") @map("funding_confidence")
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  @@map("supplemental_funding_calculations")
+}
+
+model FundingAllocation {
+  id                  String            @id @default(uuid()) @map("allocation_id")
+  ifmRunId            String            @map("ifm_run_id")
+  run                 IfmRun            @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  purchaseCandidateId String            @map("purchase_candidate_id")
+  candidate           PurchaseCandidate @relation(fields: [purchaseCandidateId], references: [id], onDelete: Cascade)
+  fundingBucket       String            @map("funding_bucket") // Document 4 §14 buckets
+  requestedAmount     Float             @map("requested_amount")
+  allocatedAmount     Float             @map("allocated_amount")
+  unfundedAmount      Float             @map("unfunded_amount")
+  allocationPriority  Int               @map("allocation_priority")
+  allocationReason    String            @map("allocation_reason")
+  fundingSource       String            @map("funding_source") // Document 3 §4 Funding Source
+  confidenceLevel     String            @default("Medium Confidence") @map("confidence_level")
+
+  @@map("funding_allocations")
+}
+
+model PurchaseDecision {
+  id                       String            @id @default(uuid()) @map("decision_id")
+  ifmRunId                 String            @map("ifm_run_id")
+  run                      IfmRun            @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  purchaseCandidateId      String            @map("purchase_candidate_id")
+  candidate                PurchaseCandidate @relation(fields: [purchaseCandidateId], references: [id], onDelete: Cascade)
+  systemDecisionLabel      String            @map("system_decision_label") // Document 3 §4 IFM Decision Label
+  fundingStatus            String            @map("funding_status") // Document 3 §4 Funding Status
+  recommendationStatus     String            @map("recommendation_status") // Document 3 §4 Recommendation Status
+  approvedAmount           Float             @default(0) @map("approved_amount")
+  delayedAmount            Float             @default(0) @map("delayed_amount")
+  excludedAmount           Float             @default(0) @map("excluded_amount")
+  ownerApprovalRequired    Boolean           @default(false) @map("owner_approval_required")
+  financingApprovalRequired Boolean          @default(false) @map("financing_approval_required")
+  decisionReason           String            @map("decision_reason")
+  confidenceLevel          String            @default("Medium Confidence") @map("confidence_level")
+  decisionStatus           String            @default("System") @map("decision_status") // System | Reviewer | Owner
+  approvalExpirationDate   DateTime?         @map("approval_expiration_date")
+
+  @@map("purchase_decisions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Governance: gaps, notes, audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+model DataGap {
+  id              String   @id @default(uuid()) @map("data_gap_id")
+  ifmRunId        String   @map("ifm_run_id")
+  run             IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  affectedDomain  String   @map("affected_domain")
+  affectedDecision String? @map("affected_decision")
+  gapDescription  String   @map("gap_description")
+  severity        String   @map("severity") // minor | confidence limiter | decision limiter | critical blocker
+  blockingStatus  String   @map("blocking_status") // blocking | partial | non-blocking
+  requiredFix     String   @map("required_fix")
+  owner           String?
+  status          String   @default("open") // open | in progress | resolved | waived
+  confidenceImpact String  @map("confidence_impact")
+
+  @@map("data_gaps")
+}
+
+model ReviewerNote {
+  id          String   @id @default(uuid()) @map("reviewer_note_id")
+  ifmRunId    String   @map("ifm_run_id")
+  run         IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  noteText    String   @map("note_text")
+  visibility  String   @default("Internal Reviewer Only") @map("visibility") // Document 3 §9 visibility categories
+  createdBy   String   @default("reviewer") @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("reviewer_notes")
+}
+
+model ExportLog {
+  id             String   @id @default(uuid()) @map("export_log_id")
+  ifmRunId       String   @map("ifm_run_id")
+  run            IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  exportType     String   @map("export_type")
+  exportUseStatus String  @map("export_use_status") // Document 3 §4 Export Use Status
+  fileName       String?  @map("file_name")
+  createdBy      String   @default("pilot-user") @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("export_logs")
+}
+
+model ChangeLog {
+  id          String   @id @default(uuid()) @map("change_log_id")
+  ifmRunId    String   @map("ifm_run_id")
+  run         IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id")
+  action      String
+  detail      String?
+  changedBy   String   @default("pilot-user") @map("changed_by")
+  changedAt   DateTime @default(now()) @map("changed_at")
+
+  @@map("change_logs")
+}

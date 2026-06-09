@@ -1,0 +1,289 @@
+﻿
+Document 5 - IFM-Distribution V1.5 Screen and Workflow Specification
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Purpose
+This document defines IFM screens, workflow modules, user roles, warning banners, next actions, approvals, output workflow, and build priority. Screen means page, tab, panel, section, modal, detail view, or workflow step; Cursor should not build 33 disconnected pages unless necessary.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. User Roles
+Role
+Workflow responsibilities
+Admin
+Company settings, assumptions, thresholds, mappings, access
+Data Preparer
+Upload files, map fields, confirm none exist, resolve data gaps
+Buyer / Purchasing Manager
+Submit purchase candidates, add evidence, request override, act outside IFM after approval
+CFO / Internal Reviewer
+Review calculations, confidence, decisions, overrides, output, locks
+Owner / Executive
+Approve high-risk/high-dollar, reserve override, LOC/factoring, strategic exceptions
+3. Seven Workflow Modules
+Module
+Includes
+Purpose
+Run Setup
+Dashboard / Run Home; New IFM Run Setup; Run History / Change Log
+Create/open/revise/lock/close/archive runs
+Data Intake & Validation
+Upload Center; Upload Batch Review; Data Validation; Data Gap Tracker
+Bring in data, map sources, validate readiness
+Financial Capacity
+Assumptions; Financial Snapshot; Cash Capacity; AP/Outflow; AR; Financing Sources
+Calculate available inventory funding
+Purchase Candidate Review
+Candidate Intake; Reorder Review; RSE Signals; Open PO Exposure; Vendor Offers; Cash Conversion
+Identify and evaluate purchase needs
+Funding Decision Review
+Funding Allocation; Fundable vs Recommended; Scenario; Decision Board; Partial Funding; Concentration Risk
+Allocate funding and assign decisions
+Approval & Output
+Approval Expiration; Buyer Override; Internal Reviewer; Customer Summary; Export Center; Keystroke Validation
+Approve, lock, summarize, export
+Follow-Up
+Action Tracker; Follow-Up Result Review
+Track actual results and reopen if needed
+4. Standard User Journeys
+Create IFM run
+Upload or enter data
+Validate readiness
+Review financial snapshot
+Review cash and supplemental capacity
+Review purchase candidates and evidence
+Review vendor offers/special terms
+Review funding allocation
+Review decision board
+Send to internal reviewer
+Request owner approval where needed
+Approve, approve with limitations, return, or hold
+Produce customer summary
+Export approved outputs
+Buyer acts outside IFM
+Track follow-up results
+5. Screen / View Detail
+Screen/View
+Display / Purpose
+Key Actions
+IFM Dashboard / Command Center
+Shows run status, data readiness, funding capacity, total requested, recommended funded, approvals, data gaps, next best action
+Create/open run, duplicate prior, view history
+New IFM Run Setup
+Company, run name, review date, funding window, cadence, reserve, thresholds, reviewer
+Save draft, continue to upload, copy settings
+Data Upload / Import Center
+Upload/manual entry by IFM data domain; source system, document, section, date, mapping method
+Upload, replace, mark none exist, validate, map fields
+Upload Batch Review
+Batch name, upload date, source system, files, data area, active/superseded status
+Mark active, replace, supersede, validate
+Data Validation / Readiness Review
+Missing data, stale data, mapping conflicts, duplicates, source conflicts, confidence
+Resolve gap, select source of truth, continue with limitations
+Saved Assumptions / Review Settings
+Reserve, funding window, thresholds, LOC/factoring allowed, concentration threshold, holdback, assumptions
+Add/edit/expire/approve assumptions
+Financial Snapshot Summary
+Review date, funding window, cash, reserve, outflows, AP, AR, open POs, funding availability
+Recalculate, view source data, add note
+Cash Capacity Summary
+Core funding, supplemental funding, total potential funding, holdback, reserve override, confidence
+View calculation detail, adjust assumptions if permitted
+AP / Required Outflow Review
+Must-pay obligations, AP due, past due, critical vendor AP, flexible AP
+Mark critical, safely deferrable with reason, link AP to PO
+AR / Expected Inflow Review
+Expected collections, confidence, included amount, factored flag
+Adjust confidence, exclude low confidence, prevent double-counting
+Financing Sources Review
+LOC, factoring, approved amounts, costs, approval requirements, risk notes
+Include/exclude, add approval note, mark unavailable
+Open PO Exposure Review
+PO status, remaining amount, changeable/cancelable, exposure, AP link
+Update status, link AP, treat draft as candidate
+Purchase Candidate Intake
+Source, vendor, item/category, amount, need reason, urgency, evidence, confidence
+Add/edit/link/submit for review
+Keystroke / Reorder Review
+Source reorder data from Keystroke or other mapped source
+Convert to candidate, resolve mapping, exclude unsupported
+Inventory / RSE Signal Review
+QOH, Min/Max, RSE class, confidence, demand support, stockout/overstock
+Link RSE to candidate, flag low confidence
+Vendor Offer / Promo-Buy Review
+Offer type, expiration, required amount, normal need, incremental amount, RSE mix, terms
+Create scenario, split by classification, recommend full/partial/decline
+Cash Conversion Timing View
+Sell-through, collection, payment due, terms schedule, timing match
+Review timing risk and note
+Funding Allocation View
+Available funding, requested funding, buckets, ranks, funded/unfunded amounts
+Review allocation, adjust holdback with reason
+Fundable vs Recommended Review
+Funding status, recommendation status, reason, approval requirement
+Separate can fund from should fund
+Scenario Comparison View
+Normal, full promo, partial promo, delay, LOC, factoring, backorder-only scenarios
+Compare scenarios and select recommendation
+Purchase Funding Decision Board
+Main working table: vendor, source, requested, recommended, approved, funding source, decision, approval, risk, next action
+Send to reviewer, request owner approval, create action, export
+Partial Funding / Holdback View
+Requested, approved, unfunded, cap, holdback, reason, follow-up
+Set cap/holdback/follow-up
+Vendor Concentration Risk View
+Vendor spend, percent of funding, displaced purchases, risk level
+Reduce/split/approve with reason
+Approval Expiration / Re-Review View
+Approval date, amount, expiration, trigger, material change, status
+Extend, expire, reopen, carry forward
+Buyer Override Request View
+Original IFM recommendation, buyer requested decision, reason, evidence
+Submit/approve/reject/modify/request more evidence
+Data Gap Tracker
+Gap, affected domain/decision, severity, blocker status, owner, due date
+Assign, resolve, waive with approval, customer-safe note
+Internal Reviewer View
+Readiness, calculations, decision board, gaps, limitations, overrides, output preview, hard-rule checks
+Approve, limit, return, override, lock, revise
+Customer Management Summary
+Executive funding summary, decision board, vendor offers, gaps, actions, approvals
+View approved customer output
+Action Tracker
+Action, owner, due date, expected result, follow-up, status
+Assign, update, complete-measure-result, reopen
+Follow-Up Result Review
+Approved, ordered, received, sold, collected, paid, result status
+Enter actual results, reopen if needed
+Export Center
+Customer/internal/operational exports with validation and lineage
+Preview, validate, download, log
+Keystroke Import-Ready File Validation
+Conditional view for Keystroke upload/re-import files
+Generate .txt, validate delimiter/columns, reject CSV/XLSX
+Run History / Change Log
+Run versions, revisions, upload changes, calculation versions, overrides, export logs
+Compare, revise, archive, view history
+6. Source-Agnostic Upload Workflow
+Upload field
+Required behavior
+source_system_type
+Choose accounting/POS/ERP/WMS/bank/financing/vendor/RSE/buyer/spreadsheet/manual/other
+source_system_name
+Name the source such as Sage, NetSuite, Keystroke, Excel, manual schedule
+source_document_name
+Report/export/document name
+source_area_or_section
+Report section/area used
+ifm_data_domain
+Destination domain
+source_date
+Required or flagged missing
+mapping_method
+Saved map/manual map/other
+mapping_confidence
+High/medium/low/insufficient
+review-only/import-ready
+Must be clearly labeled
+7. Standard Action Buttons
+Action label
+Save Draft
+Upload File
+Replace Upload
+Validate Data
+Mark None Exist
+Select Source of Truth
+Recalculate
+Send to Reviewer
+Return for Correction
+Request Owner Approval
+Approve
+Approve with Limitations
+Hold Until More Data
+Create Buyer Override Request
+Lock Output
+Generate Export
+Validate Keystroke File
+Create Revised Run
+Mark Follow-Up Needed
+Close Run
+Archive Run
+8. Warning Banners and Next Best Action
+Warning condition
+Suggested banner
+Negative core funding
+Core operating cash does not support new inventory purchases without supplemental funding or management override.
+LOC/factoring required
+This purchase depends on supplemental funding and requires approval.
+Reserve override
+This purchase would use cash below protected reserve. Owner approval required.
+Stale data
+One or more key sources are stale and may affect confidence.
+Missing source of truth
+Conflicting data exists. Select source of truth before final output.
+Vendor concentration
+This vendor consumes a high percentage of available inventory funding.
+Keystroke export format failure
+Keystroke imports must be tab-delimited .txt.
+Approved run locked
+Create a revision before changing approved data.
+Buyer override pending
+Buyer request requires reviewer/owner decision.
+Data gap blocks decision
+A material gap blocks one or more purchase decisions.
+Module
+Example Next Best Action
+Run Setup
+Complete funding window and cash reserve settings
+Data Intake & Validation
+Upload AP Aging or confirm no AP records exist
+Financial Capacity
+Review stale AR data before approving funding
+Purchase Candidate Review
+Link candidate to RSE, reorder, backorder, or vendor offer evidence
+Funding Decision Review
+Send recommended decisions to reviewer
+Approval & Output
+Owner approval required for LOC-supported purchase
+Follow-Up
+Enter actual ordered amount and mark follow-up needed
+9. Build Priority
+Phase
+Views
+Build First
+Dashboard, run setup, upload/import, validation, data gaps, assumptions, financial snapshot, cash capacity, AP/AR, financing, open PO exposure, candidate intake, funding allocation, decision board, internal reviewer, customer summary, export center, run history
+Build Second
+Upload batch, reorder review, RSE signal review, vendor offer, cash conversion, fundable vs recommended, scenario, partial funding, concentration risk, action tracker
+Build Third
+Approval expiration, buyer override, follow-up result, Keystroke validation when applicable
+10. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Full workflow modules, screens/views, roles, warnings, actions, and build priority included
+Gaps
+Pass with carry-forward
+Exact UI styling/wireframes can be done in Cursor
+Errors
+Pass
+No-auto-execution and Keystroke .txt rules preserved
+Recommendations
+Included
+Use decision board as main working screen
+Ease of use
+Pass
+Command center, warning banners, and next actions included
+

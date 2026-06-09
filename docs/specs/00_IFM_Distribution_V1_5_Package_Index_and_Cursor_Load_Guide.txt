@@ -1,0 +1,39 @@
+﻿
+IFM-Distribution V1.5 Package Index and Cursor Load Guide
+Individual unzipped DOCX files - no ZIP required
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+This guide explains how to load the eight IFM documents into Cursor in stages. The eight documents are provided individually rather than inside a ZIP folder.
+Stage
+Load these files
+Purpose
+1 - Foundation
+01 and 02
+Product intent, hard rules, boundaries, build sequence
+2 - Data and Logic
+03 and 04
+Data model, source mapping, formulas, decisions
+3 - Workflow and Outputs
+05 and 06
+Screens, workflow, outputs, exports
+4 - Testing and Acceptance
+07 and 08
+Sample test case and developer acceptance checklist
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+Recommended Cursor prompt after each stage
+Summarize what you understand so far.
+List hard rules you must not violate.
+List what you will build next before writing code.
+Identify any conflicts or missing information before proceeding.
+
