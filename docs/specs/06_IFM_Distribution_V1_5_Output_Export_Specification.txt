@@ -1,0 +1,446 @@
+﻿
+Document 6 - IFM-Distribution V1.5 Output and Export Specification
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Purpose and Output Principle
+This document defines IFM customer-facing outputs, internal reviewer outputs, operational exports, export validation, visibility controls, version locking, and Keystroke import-ready file rules.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. Output Type vs. Export File
+Term
+Meaning
+Output
+Screen, summary, report, table, or view produced by IFM
+Export
+Downloadable file created from an output
+Customer-Facing Output
+Plain-English approved management output
+Internal Reviewer Output
+Detailed internal/reviewer output
+Operational Export
+File used to support action, tracking, or review
+Keystroke Import-Ready Export
+Tab-delimited .txt file validated for Keystroke upload/re-import
+3. Output Audience Layers
+Layer
+Purpose
+Allowed / restricted content
+Customer-Facing Management Output
+Owner/customer decision clarity
+Plain English; no raw formulas/scoring/internal notes unless approved
+Internal Reviewer Output
+CFO/reviewer/admin validation
+Calculation detail, assumptions, reviewer notes, suppressed findings, source lineage
+Operational Export Output
+Buyer/reviewer/action support
+Review-only or operational action support; clearly labeled
+Keystroke Import-Ready Output
+Conditional Keystroke import/re-import
+Tab-delimited .txt only; no CSV/XLSX import-ready label
+4. Customer Management Summary Sections
+Section
+Required content
+Output Header
+Company, run, review date, funding window, status, confidence, version
+Executive Funding Summary
+Core funding, supplemental funding, total potential, total requested, recommended funded/delayed, key limitation
+Funding Capacity View
+Cash vs supplemental funding, holdback, confidence, note
+Top Funding Priority
+Priority, vendor/category, action, amount, why, funding source, approval, follow-up
+Purchase Funding Decision Board
+Priority purchase decisions and next actions
+Vendor Offer Summary
+Offers, normal need vs offer quantity, funded/excluded, recommendation
+Funding Source Summary
+Cash, AR, LOC, factoring, vendor terms, approvals, risk notes
+Data Gaps Affecting Decisions
+Plain-English gaps, affected decisions, fixes, owners
+Owner Approval Items
+High-risk/high-dollar/financing/reserve/strategic approvals
+Action Tracker
+Action, owner, due date, expected result, follow-up, status
+Closing Management Summary
+What to do now, what waits, what needs approval/data, next review
+5. Customer-Facing Purchase Funding Decision Board Columns
+Column
+Required
+Notes
+Priority Rank
+Required
+Funding priority
+Vendor
+Required
+Supplier
+Purchase Source
+Required
+RSE, reorder, buyer, vendor offer, backorder
+Purchase Type
+Strongly Preferred
+Replenishment, promo, backorder, emergency
+Requested Amount
+Required
+Original request
+Recommended Funded Amount
+Required
+IFM recommendation
+Approved Funding Amount
+Conditional
+Reviewer/owner approved
+Delayed / Unfunded Amount
+Required
+Amount not funded now
+IFM Decision
+Required
+Approve/reduce/split/delay/hold/etc.
+Funding Source
+Required
+Cash/AR/LOC/factoring/terms/combo
+RSE / Evidence Support
+Strongly Preferred
+Plain-English support
+Risk / Limitation
+Required
+Cash/data/inventory/vendor/timing
+Approval Needed
+Required
+Reviewer/owner/financing/none
+Next Action
+Required
+Buyer/reviewer/owner/data action
+6. Export Column Specifications
+Purchase Funding Decision Export
+Column
+ifm_run_id
+review_date
+funding_window_start
+funding_window_end
+purchase_candidate_id
+vendor_name
+vendor_code
+item_or_category
+purchase_source
+need_reason
+requested_amount
+recommended_funded_amount
+approved_funding_amount
+actual_ordered_amount
+received_amount
+ap_billed_amount
+paid_amount
+unfunded_amount
+delayed_amount
+excluded_amount
+funding_source
+funding_status
+recommendation_status
+ifm_decision_label
+approval_required
+owner_approval_required
+financing_approval_required
+confidence_level
+decision_reason
+next_action
+next_action_owner
+export_use_status
+export_visibility
+Funding Summary Export
+Column
+ifm_run_id
+review_date
+funding_window_start
+funding_window_end
+cash_on_hand
+protected_cash_reserve
+required_outflows_total
+ap_pressure_total
+open_po_exposure_total
+expected_inflows_included
+core_available_inventory_funding
+supplemental_funding_capacity
+total_potential_inventory_funding
+emergency_service_holdback
+funding_confidence
+limitation_note
+calculation_version
+locked_flag
+Funding Allocation Export
+Column
+ifm_run_id
+allocation_id
+purchase_candidate_id
+vendor_name
+funding_bucket
+requested_amount
+allocated_amount
+unfunded_amount
+allocation_priority
+funding_source
+allocation_reason
+confidence_level
+approval_required
+Data Gap Export
+Column
+ifm_run_id
+data_gap_id
+affected_domain
+affected_decision
+gap_description
+severity
+blocking_status
+required_fix
+owner
+due_date
+status
+confidence_impact
+customer_visible_flag
+Action Tracker Export
+Column
+ifm_run_id
+action_id
+related_decision_id
+action_description
+owner_role
+assigned_to
+due_date
+expected_result
+follow_up_date
+action_status
+escalation_condition
+customer_visible_flag
+Vendor Offer / Promo-Buy Export
+Column
+ifm_run_id
+vendor_offer_id
+vendor_name
+offer_type
+offer_expiration_date
+required_order_amount
+normal_needed_purchase_amount
+incremental_purchase_amount
+discount_terms_freight_benefit
+estimated_financing_need
+estimated_inventory_burden
+rse_classification_mix
+recommended_funded_amount
+recommended_excluded_amount
+funding_source
+recommendation
+approval_required
+decision_reason
+Scenario Comparison Export
+Column
+ifm_run_id
+scenario_id
+purchase_candidate_id
+scenario_name
+purchase_amount
+funding_source
+cash_impact
+financing_impact
+inventory_impact
+gross_profit_estimate
+discount_or_terms_benefit
+sell_through_timing
+payment_timing
+risk_level
+recommendation
+approval_required
+Cash Conversion Timing Export
+Column
+ifm_run_id
+purchase_candidate_id
+vendor_name
+expected_sell_through_days
+expected_collection_days
+vendor_payment_due_date
+extended_terms_schedule
+expected_cash_conversion_date
+timing_match_status
+timing_risk_note
+Reviewer Log Export
+Column
+ifm_run_id
+reviewer_note_id
+purchase_candidate_id
+reviewer_name
+note_type
+original_recommendation
+final_recommendation
+override_reason
+hard_safety_rules_preserved
+customer_visible_flag
+note_date
+Buyer Override Request Export
+Column
+ifm_run_id
+buyer_override_request_id
+purchase_candidate_id
+requested_by
+original_ifm_recommendation
+buyer_requested_decision
+buyer_reason
+supporting_evidence
+urgency
+reviewer_decision
+final_decision
+decision_date
+Follow-Up Result Export
+Column
+ifm_run_id
+purchase_candidate_id
+decision_id
+approved_amount
+actual_ordered_amount
+actual_received_amount
+actual_sold_amount
+cash_collected_amount
+payment_due_amount
+result_status
+follow_up_note
+reopened_flag
+7. Keystroke Import-Ready Export Specification
+This applies only if IFM generates a file intended for Keystroke upload or re-import. The hard rule is tab-delimited .txt only.
+Validation check
+Required
+File extension is .txt
+Required
+Delimiter is tab
+Required
+Column order validated
+Required
+Unsupported fields removed
+Required
+Internal notes removed
+Required
+Formulas removed
+Required
+Extra headers removed if not allowed
+Required
+Unsupported characters checked
+Required
+Keystroke import type identified
+Required
+Exact Keystroke template validated
+Required before import-ready label
+Export logged
+Required
+File label
+Meaning
+Keystroke Import-Ready - Tab-Delimited TXT
+Validated .txt file intended for Keystroke import/re-import
+Review Only - Not Keystroke Import-Ready
+CSV/XLSX/TXT not validated for Keystroke import
+8. Visibility, Sensitive Data, and Output Validation
+Visibility category
+Meaning
+Customer Visible
+Approved for customer-facing output
+Internal Reviewer Only
+Reviewer/CFO/internal use
+Developer/Admin Only
+System diagnostics
+Sensitive - Requires Approval
+Can show only after approval
+Suppressed
+Not shown in normal output
+Sensitive data check
+Rule
+Bank details
+Remove or approve
+LOC details
+Summarize or approve
+Factoring details
+Summarize or approve
+Customer AR detail
+Remove or approve
+Vendor AP detail
+Remove or approve
+Reviewer notes
+Remove unless approved
+Buyer override comments
+Remove unless approved
+Developer diagnostics
+Remove
+Internal formulas/scoring
+Remove
+Decision-impacting data gaps
+Include in customer-safe language
+9. Output Versioning, Export Validation, and Naming
+Required output/version field
+ifm_run_id
+output_version
+calculation_version
+output_status
+approved_by
+approved_date
+locked_flag
+revision_reason
+parent_output_id
+Export validation field
+export_type
+export_use_status
+generated_by
+generated_date
+source_output_version
+calculation_version
+visibility_check_passed
+sensitive_data_check_passed
+file_format_check_passed
+keystroke_validation_status
+export_ready_status
+validation_note
+File type
+Naming pattern
+Customer-facing
+IFM_Distribution_[CompanyName]_[ReviewDate]_[OutputType]_v[Version]
+Internal export
+IFM_Internal_[CompanyName]_[ReviewDate]_[ExportType]_v[Version]
+Keystroke import-ready
+IFM_Keystroke_[CompanyName]_[ReviewDate]_[ImportType]_v[Version].txt
+10. Customer-Facing Wording Rules
+Use
+Avoid
+Recommended funded amount
+Formula result
+Owner approval required
+Auto-approved
+Delay and re-review
+PO created
+Depends on line-of-credit approval
+Keystroke updated
+This data gap limits confidence
+LOC assumed
+Buyer to act outside IFM after approval
+Factoring assumed
+11. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Customer/internal/operational outputs, export columns, Keystroke validation, visibility and source lineage included
+Gaps
+Pass with carry-forward
+Exact Keystroke columns depend on real import template
+Errors
+Pass
+Review-only vs action-ready and no-auto-execution language preserved
+Recommendations
+Included
+Keep customer output concise and top 3-5 priority-focused
+Ease of use
+Pass
+Clear labels, action owner, confidence wording, and suppression rules included
+

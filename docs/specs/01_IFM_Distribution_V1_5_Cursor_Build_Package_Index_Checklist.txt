@@ -1,0 +1,184 @@
+﻿
+Document 1 - IFM-Distribution V1.5 Cursor Build Package Index / Checklist
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Purpose
+This document is the package index and build checklist for Inventory Funding Manager - Distribution V1.5. It defines what the IFM package contains, how it should be loaded into Cursor, what the V1.5 build must include, and which rules cannot be violated.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. Product Summary
+IFM-Distribution helps a distribution business decide how much inventory it can responsibly fund and which purchase candidates deserve that funding first. It uses the company financial snapshot, required obligations, AP, AR, open PO exposure, inventory position, purchase candidates, vendor terms, financing sources, RSE signals, and data confidence to recommend funding decisions. IFM is not a PO execution system.
+3. Cursor Load Order
+Stage
+Documents to load
+Cursor goal
+User checkpoint
+Stage 1 - Foundation
+00 Package Guide, 01 Package Index, 02 Build Instruction Brief
+Understand what IFM is, what it is not, V1.5 boundaries, and build sequence
+Ask Cursor to summarize product rules and proposed build plan before code
+Stage 2 - Data and Logic
+03 Data Model, 04 Calculation Logic
+Build standard IFM domains, source mapping, validation, formulas, decision logic
+Ask Cursor to list tables, formulas, and hard rules before implementation
+Stage 3 - Workflow and Outputs
+05 Screen Workflow, 06 Output Export
+Build workflow modules, decision board, reviewer view, customer summary, export controls
+Ask Cursor to explain UI flow and export rules before building
+Stage 4 - Testing and Acceptance
+07 Test Data, 08 Acceptance Checklist
+Validate module using sample data and pass/fail matrix
+Run sample test and compare to expected results
+4. Document Inventory
+File
+Document
+Purpose
+Cursor use
+01
+Cursor Build Package Index / Checklist
+Package map, build scope, hard rules, load sequence
+Use first for context and build boundaries
+02
+Cursor Build Instruction Brief
+Plain-English product definition and build instructions
+Use to understand business logic and V1.5 scope
+03
+Data Model and Field Mapping Guide
+Full data domains, fields, source mapping, validation, confidence, snapshots
+Use for database/schema/import design
+04
+Calculation and Decision Logic Guide
+Funding formulas, decision logic, allocation, approval rules
+Use for calculation engine and recommendation logic
+05
+Screen and Workflow Specification
+Workflow modules, screens/views, user paths, warnings, next actions
+Use for UI/workflow build
+06
+Output and Export Specification
+Customer/internal outputs, exports, visibility, Keystroke file validation
+Use for reporting/export layer
+07
+Sample Test Data and Expected Results
+Steve’s Bowling Supply test scenario and pass/fail matrix
+Use for testing build accuracy
+08
+Developer Acceptance Checklist
+Build acceptance criteria, readiness levels, blockers, sign-off
+Use for pilot-readiness review
+5. Required Build Components
+Component
+Required V1.5 capability
+Notes
+Run Setup
+Create IFM run with review date, funding window, company, reviewer, reserve, thresholds
+Weekly default with monthly/on-demand supported
+Source-Agnostic Import and Mapping Layer
+Accept data from any approved system or manual source and map into standard IFM domains
+QuickBooks and Keystroke are examples only
+Data Validation
+Validate required fields, source dates, freshness, mapping confidence, duplicates, confirmed-none-exist flags
+Blank does not mean zero
+Financial Snapshot
+Capture cash, reserve, required outflows, AP, AR, open POs, financing sources
+Point-in-time plus funding window
+Core Funding Calculation
+Calculate operating-cash inventory funding after reserves/obligations/exposure
+Do not overstate cash
+Supplemental Funding
+Calculate LOC/factoring/other approved capacity separately
+Requires approval where applicable
+Purchase Candidates
+Capture pre-PO and PO-related purchase needs from RSE, reorder reports, buyer requests, backorders, vendor offers
+IFM must work before PO exists
+RSE Signal Support
+Use RSE class, Min/Max, demand and confidence as funding-priority signals
+RSE is not funding approval
+Vendor Offer Review
+Compare normal need to promo/offer quantity and terms
+Vendor deals not automatically good
+Funding Allocation
+Rank candidates and allocate funding by priority, bucket, source, confidence
+Preserve holdback when needed
+Decision Board
+Show requested, recommended, approved, delayed, excluded, funding source, approval needed, next action
+Main working screen
+Reviewer / Owner Controls
+Support reviewer approval, owner approval, overrides, expiration, re-review triggers
+Overrides cannot bypass hard rules
+Outputs and Exports
+Create safe customer output, internal output, operational exports, export logs
+Review-only vs action-ready labels
+Keystroke File Validation
+If Keystroke-targeted import/re-import file is generated, enforce tab-delimited .txt
+CSV/XLSX review only
+Testing / Acceptance
+Pass Document 7 test data and Document 8 checklist
+Required before controlled pilot
+6. V1.5 In Scope and Out of Scope
+In Scope
+Out of Scope for V1.5
+Manual/semi-automated upload and mapping
+Live QuickBooks/Keystroke/bank/factor integrations unless separately approved
+Source-agnostic data intake
+Automatic PO creation, modification, cancellation, or vendor transmission
+Funding calculations and decision recommendations
+Automatic payments, LOC draw, or factoring submission
+Reviewer/owner approval workflow
+Full enterprise RBAC/security hardening
+Customer summary and operational exports
+Full production deployment and support process
+Document 7 sample testing
+All real-pilot templates before pilot source files are received
+7. Pre-Handoff Checklist
+Checklist item
+Status target
+Documents 1-8 complete and internally reviewed
+Pass
+All approved addenda merged into final files
+Pass
+Hard rules present in relevant documents
+Pass
+Source-agnostic rule preserved
+Pass
+Keystroke .txt rule preserved
+Pass
+No-auto-execution rule preserved
+Pass
+Sample test and acceptance checklist included
+Pass
+Actual test files/workbooks built
+Carry-forward after docs
+Actual Keystroke import template confirmed if needed
+Carry-forward
+8. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Document contains package scope, load order, build components, hard rules, and carry-forward items
+Gaps
+Pass with carry-forward
+Actual test files and Keystroke templates are future execution items
+Errors
+Pass
+No conflicting build rules retained
+Recommendations
+Included
+Use staged Cursor loading and ask Cursor to summarize at each stage
+Ease of use
+Pass
+Package guide gives reading order and build checkpoints
+

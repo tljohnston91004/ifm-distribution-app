@@ -1,0 +1,899 @@
+﻿
+Document 8 - IFM-Distribution V1.5 Developer Acceptance Checklist
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Purpose and Acceptance Standard
+This document defines the acceptance checklist for the first working IFM-Distribution V1.5 build. IFM is accepted only if it can map source data, validate data, calculate funding, evaluate purchase candidates, produce safe outputs, enforce hard rules, and pass Document 7 sample tests.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. Readiness Levels
+Level
+Meaning
+Required before
+Level 1 - Documentation Ready
+Documents 1-8 complete, internally reviewed, addenda approved
+Consolidation
+Level 2 - Cursor Build Ready
+Documents consolidated, load order defined, no conflicting addenda
+Cursor/developer handoff
+Level 3 - Functional Test Ready
+First build exists; data upload, validation, calculations, outputs usable
+Document 7 test run
+Level 4 - Controlled Pilot Ready
+Document 7 passes; critical blockers resolved; customer output safe; source mapping works
+Real controlled pilot
+Level 5 - Production Ready - Future
+Pilot results reviewed, security, integrations, support/training completed
+Future scope
+3. Acceptance Status Labels and Categories
+Status
+Meaning
+Pass
+Requirement works
+Pass with Notes
+Works but minor limitation
+Fail - Correction Required
+Must be fixed
+Blocked - Missing Data/Template
+Cannot test due to missing source/template
+Not Applicable
+Does not apply
+Category
+Meaning
+Critical Blocker
+Must pass before controlled pilot
+Required for Pilot
+Needed; may pass with notes only if not hard-rule related
+Build-Ready Requirement
+Needed before Cursor/developer handoff
+Functional Test Requirement
+Needed before Document 7 test
+Optional / Deferrable
+Useful but can defer
+Future V2
+Not required for V1.5
+4. Critical Blockers
+Core funding calculation wrong
+Required outflows not protected
+AP pressure ignored
+AR blindly counted or double-counted
+Open PO exposure ignored or double-counted
+LOC/factoring shown as cash
+Factored AR double-counted
+Purchase candidates cannot exist before POs
+RSE classification ignored when available
+Vendor offers auto-approved due to discount/terms
+Fundable/recommended not separated
+IFM executes PO/payment/borrowing/factoring
+Reviewer bypasses hard safety rules
+Missing/blank data treated as zero
+Sensitive/internal data leaks into customer output
+Keystroke import-ready files not tab-delimited .txt
+Source-agnostic mapping fails solely due to non-QuickBooks/non-Keystroke source
+Document 7 calculations fail
+Known limitations undocumented
+5. Build Area Acceptance Checklist
+Application Shell and Run Setup
+#
+Acceptance requirement
+Status
+1
+IFM dashboard/run home opens
+Pending
+2
+New run with company, review date, funding window, reviewer, reserve can be created
+Pending
+3
+Run status transitions work
+Pending
+4
+Run version/revision tracked
+Pending
+5
+Approved run locks
+Pending
+6
+Prior run/history view works
+Pending
+7
+Next Best Action appears
+Pending
+Source-Agnostic Data Intake
+#
+Acceptance requirement
+Status
+1
+Source system type supported
+Pending
+2
+Source system name captured
+Pending
+3
+Source document/report name captured
+Pending
+4
+Source area/section captured
+Pending
+5
+Source date captured or flagged
+Pending
+6
+Upload date tracked
+Pending
+7
+Other source requires manual mapping
+Pending
+8
+Source fields map to standard IFM domains
+Pending
+9
+Mapping confidence captured
+Pending
+10
+Data confidence captured
+Pending
+11
+Freshness status captured
+Pending
+12
+Equivalent non-QuickBooks/non-Keystroke sources accepted
+Pending
+Upload Validation and Data Readiness
+#
+Acceptance requirement
+Status
+1
+Required fields validated
+Pending
+2
+Blank data not zero without confirmation
+Pending
+3
+Confirmed-none-exist workflow works
+Pending
+4
+Stale data flagged
+Pending
+5
+Duplicates flagged
+Pending
+6
+Replacement uploads tracked
+Pending
+7
+Source conflicts flagged
+Pending
+8
+Data gap records created
+Pending
+9
+Run readiness status assigned
+Pending
+10
+Action-area blocking works
+Pending
+Financial Snapshot and Core Funding Calculation
+#
+Acceptance requirement
+Status
+1
+Snapshot created
+Pending
+2
+Cash reserve subtracted
+Pending
+3
+Required outflows subtracted
+Pending
+4
+AP pressure subtracted
+Pending
+5
+AR confidence adjustment works
+Pending
+6
+Open PO exposure subtracted
+Pending
+7
+Draft POs excluded from committed exposure
+Pending
+8
+Document 7 core funding equals $47,000
+Pending
+9
+Holdback equals $10,000
+Pending
+10
+Core allocatable equals $37,000
+Pending
+11
+Negative funding warning appears
+Pending
+Supplemental Funding
+#
+Acceptance requirement
+Status
+1
+LOC capacity captured
+Pending
+2
+Document 7 LOC capacity equals $75,000
+Pending
+3
+Factoring capacity captured
+Pending
+4
+Document 7 factoring equals $66,000
+Pending
+5
+Supplemental funding equals $141,000
+Pending
+6
+Total potential funding equals $188,000
+Pending
+7
+LOC/factoring separate from cash
+Pending
+8
+Approval required when applicable
+Pending
+9
+AR double-counting prevented
+Pending
+10
+Financing cost/risk note appears
+Pending
+Purchase Candidate Intake
+#
+Acceptance requirement
+Status
+1
+Candidates can exist before POs
+Pending
+2
+Source captured
+Pending
+3
+Need reason captured
+Pending
+4
+Estimated amount required
+Pending
+5
+Evidence strength captured
+Pending
+6
+Urgency captured
+Pending
+7
+Document 7 total equals $208,000
+Pending
+8
+Buyer request supported
+Pending
+9
+Buyer override is request only
+Pending
+RSE Classification and Signal Treatment
+#
+Acceptance requirement
+Status
+1
+RSE signals imported/entered
+Pending
+2
+RSE affects priority
+Pending
+3
+RSE not funding approval
+Pending
+4
+Promo-buy mix uses RSE class
+Pending
+5
+PC-001 high priority
+Pending
+6
+PC-004 partial funding works
+Pending
+7
+Slow items restricted
+Pending
+8
+IFM can operate without RSE at lower confidence
+Pending
+Keystroke / Reorder Treatment
+#
+Acceptance requirement
+Status
+1
+Reorder data upload/entry works
+Pending
+2
+Suggestions become candidates
+Pending
+3
+Suggestion is not approval
+Pending
+4
+Item/vendor mapping works
+Pending
+5
+Over-Max SlowLane not supported
+Pending
+6
+Non-Keystroke reorder source accepted when mapped
+Pending
+Vendor Offer / Promo-Buy Logic
+#
+Acceptance requirement
+Status
+1
+Offers can be entered
+Pending
+2
+Normal need vs offer compared
+Pending
+3
+Extended terms evaluated
+Pending
+4
+Deals not automatically good
+Pending
+5
+LaneMaster partial offer result correct
+Pending
+6
+SlowLane decline/hold result correct
+Pending
+7
+Vendor concentration flagged
+Pending
+8
+Offer expiration shown
+Pending
+9
+Offer linked to candidate/scenario
+Pending
+Cash Conversion Timing
+#
+Acceptance requirement
+Status
+1
+Sell-through timing captured
+Pending
+2
+Payment timing derived from terms
+Pending
+3
+Collection timing considered
+Pending
+4
+Match status assigned
+Pending
+5
+Slow promo timing flagged
+Pending
+6
+Plain-English timing explanation appears
+Pending
+Funding Allocation and Buckets
+#
+Acceptance requirement
+Status
+1
+Candidates ranked
+Pending
+2
+Buckets supported
+Pending
+3
+Document 7 core allocation matches
+Pending
+4
+Supplemental funding not automatically fully allocated
+Pending
+5
+Partial funding supported
+Pending
+6
+Unfunded/delayed/excluded tracked
+Pending
+7
+Holdback preserved
+Pending
+Fundable vs Recommended
+#
+Acceptance requirement
+Status
+1
+Funding status assigned
+Pending
+2
+Recommendation status assigned
+Pending
+3
+Separate statuses
+Pending
+4
+PC-006 fundable but not recommended
+Pending
+5
+Full PC-004 not recommended
+Pending
+6
+Output shows both statuses
+Pending
+Decision and Approval Controls
+#
+Acceptance requirement
+Status
+1
+Decision labels supported
+Pending
+2
+Owner threshold works
+Pending
+3
+Financing approval works
+Pending
+4
+Strategic exception approval works
+Pending
+5
+Reserve override approval works
+Pending
+6
+Approval expiration works
+Pending
+7
+Material re-review works
+Pending
+8
+Reviewer override logged
+Pending
+9
+Reviewer cannot bypass hard rules
+Pending
+Execution Boundary
+#
+Acceptance requirement
+Status
+1
+No PO creation
+Pending
+2
+No PO sending
+Pending
+3
+No automatic PO modification/cancellation
+Pending
+4
+No payment initiation
+Pending
+5
+No LOC draw
+Pending
+6
+No factoring transaction
+Pending
+7
+Safe language used
+Pending
+8
+Funding approval separated from purchase approval
+Pending
+Customer Output
+#
+Acceptance requirement
+Status
+1
+Summary generates
+Pending
+2
+Plain-English output
+Pending
+3
+Top 3-5 priorities
+Pending
+4
+Decision-impacting gaps visible
+Pending
+5
+Sensitive data protected
+Pending
+6
+Confidence wording clear
+Pending
+7
+Next action owner shown
+Pending
+8
+Buyer action outside IFM language
+Pending
+9
+Document 7 summary logic matches
+Pending
+Internal Reviewer Output
+#
+Acceptance requirement
+Status
+1
+Calculation detail visible
+Pending
+2
+Data confidence visible
+Pending
+3
+Source lineage visible
+Pending
+4
+Data conflicts visible
+Pending
+5
+Override log exists
+Pending
+6
+Internal-only notes visible internally
+Pending
+7
+Output visibility review exists
+Pending
+8
+Run lock/version visible
+Pending
+Exports
+#
+Acceptance requirement
+Status
+1
+Decision export works
+Pending
+2
+Funding summary export works
+Pending
+3
+Allocation export works
+Pending
+4
+Data gap export works
+Pending
+5
+Action tracker export works
+Pending
+6
+Vendor offer export works
+Pending
+7
+Scenario export works
+Pending
+8
+Reviewer log export works
+Pending
+9
+Export use status appears
+Pending
+10
+Validation summary exists
+Pending
+11
+Lineage preserved
+Pending
+Keystroke Import-Ready Rule
+#
+Acceptance requirement
+Status
+1
+Keystroke import-ready file must be .txt
+Pending
+2
+Delimiter must be tab
+Pending
+3
+CSV cannot be labeled import-ready
+Pending
+4
+XLSX cannot be labeled import-ready
+Pending
+5
+Unsupported fields removed
+Pending
+6
+Formulas removed
+Pending
+7
+Internal notes removed
+Pending
+8
+Column order validated
+Pending
+9
+Correct label shown
+Pending
+10
+Clear failure message
+Pending
+Data Gaps, Warnings, Next Best Action
+#
+Acceptance requirement
+Status
+1
+Data Gap Tracker works
+Pending
+2
+Warning banners appear
+Pending
+3
+Next Best Action appears
+Pending
+4
+Low confidence affects wording
+Pending
+5
+Insufficient data blocks appropriately
+Pending
+6
+Material gaps cannot be hidden
+Pending
+Follow-Up and Result Measurement
+#
+Acceptance requirement
+Status
+1
+Action tracker assigns owners
+Pending
+2
+Follow-up result entered
+Pending
+3
+Completed action not automatically success
+Pending
+4
+Reopen logic works
+Pending
+5
+Approved but unused funding tracked
+Pending
+Test File Package Readiness
+#
+Acceptance requirement
+Status
+1
+Test files created from Document 7
+Pending
+2
+Expected results workbook exists
+Pending
+3
+Pass/fail matrix usable
+Pending
+4
+Test files upload or flag mapping issues
+Pending
+5
+Output matches Document 7
+Pending
+Keystroke Import Template Confirmation
+#
+Acceptance requirement
+Status
+1
+Import type identified
+Pending
+2
+Template received/validated or N/A
+Pending
+3
+Column order captured
+Pending
+4
+Header rule captured
+Pending
+5
+Field format rules captured
+Pending
+6
+Unsupported fields excluded
+Pending
+7
+No import-ready label without validated template
+Pending
+8
+Tab-delimited .txt enforced
+Pending
+9
+Test import status tracked
+Pending
+Pilot Data Mapping Readiness
+#
+Acceptance requirement
+Status
+1
+Mapping workflow exists
+Pending
+2
+Required fields enforced
+Pending
+3
+Optional fields mapped
+Pending
+4
+Transformation rules documented
+Pending
+5
+Mapping confidence assigned
+Pending
+6
+Reviewer can approve low-confidence mapping
+Pending
+7
+Non-QuickBooks AP accepted
+Pending
+8
+Non-Keystroke inventory accepted
+Pending
+9
+Spreadsheet purchase request accepted
+Pending
+10
+Unknown source requires review
+Pending
+6. Document 7 Test Case Acceptance Summary
+Test area
+Expected result
+Required status
+Core available inventory funding
+$47,000
+Must pass
+Emergency/service holdback
+$10,000
+Must pass
+Core allocatable funding
+$37,000
+Must pass
+Supplemental funding
+$141,000
+Must pass
+Total potential funding
+$188,000
+Must pass
+Included AR
+$167,000
+Must pass
+Required outflows
+$195,000
+Must pass
+AP pressure
+$190,000
+Must pass
+Committed open PO exposure
+$85,000
+Must pass
+Purchase candidate total
+$208,000
+Must pass
+PC-001 decision
+Approve
+Must pass
+PC-002 decision
+Approve with Caution
+Must pass
+PC-003 decision
+Approve with Caution
+Must pass
+PC-004 decision
+Take Partial Vendor Offer
+Must pass
+PC-005 decision
+Owner Approval Required
+Must pass
+PC-006 decision
+Decline Vendor Offer or Hold Until More Data
+Must pass
+PC-007 decision
+Hold / purchase candidate treatment
+Must pass
+Keystroke CSV/XLSX validation
+Must fail if labeled import-ready
+Must pass
+Keystroke .txt validation
+Must pass only if tab-delimited and template-validated
+Must pass
+Source-agnostic mapping
+Non-QB/non-KS source accepted when mapped
+Must pass
+7. V1.5 Not Required for First Pilot
+Live QuickBooks integration
+Live Keystroke integration
+Live bank/factor integration
+Automatic PO creation/modification/vendor communication
+Automatic payments, LOC draw, or factoring submission
+Full role-based enterprise permissions
+Full PDF/Word report designer
+Advanced forecasting engine
+Full production deployment security/support
+8. Final Sign-Off and Acceptance Summary
+Role
+Sign-off area
+Product Owner / Business Reviewer
+Product logic, customer output, decision usefulness
+Developer
+Build completion, technical function, known limitations
+Internal Reviewer / CFO Reviewer
+Funding calculation, confidence, workflow
+Data Reviewer
+Source mapping, upload validation, data gaps
+Keystroke / POS Specialist if applicable
+Keystroke .txt template and validation
+Pilot Owner / Client Reviewer if applicable
+Pilot usability and workflow fit
+Readiness area
+Required before
+Status
+Documents 1-8 completed and internally reviewed
+Documentation Ready
+Pending
+Documents 1-8 consolidated
+Cursor Build Ready
+Pending
+Source-agnostic mapping included
+Cursor Build Ready
+Pending
+Test file package created
+Functional Test Ready
+Pending
+Core funding calculation passes
+Controlled Pilot Ready
+Pending
+Document 7 expected results pass
+Controlled Pilot Ready
+Pending
+Customer output reviewed
+Controlled Pilot Ready
+Pending
+Internal reviewer output reviewed
+Controlled Pilot Ready
+Pending
+Keystroke .txt rule tested if applicable
+Controlled Pilot Ready
+Pending
+Critical blockers resolved
+Controlled Pilot Ready
+Pending
+Known limitations documented
+Controlled Pilot Ready
+Pending
+Product owner sign-off completed
+Controlled Pilot Ready
+Pending
+9. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Full acceptance coverage by build area plus readiness levels included
+Gaps
+Pass with carry-forward
+Actual test files and real Keystroke template are execution steps
+Errors
+Pass
+Hard blockers and V1.5 exclusions are clear
+Recommendations
+Included
+Use this as master acceptance checklist after build
+Ease of use
+Pass
+Pass/fail status, categories, blockers, and sign-off make review practical
+

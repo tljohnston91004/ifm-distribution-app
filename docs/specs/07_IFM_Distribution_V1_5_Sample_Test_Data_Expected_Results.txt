@@ -1,0 +1,748 @@
+﻿
+Document 7 - IFM-Distribution V1.5 Sample Test Data and Expected Results
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Purpose and Test Principle
+This document defines the Steve’s Bowling Supply IFM sample test case and expected results. It validates calculations, source mapping, RSE/Keystroke evidence, vendor offers, outputs, exports, and hard-rule compliance.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. Sample Test Company and Run Setup
+Field
+Sample value
+Company Name
+Steve’s Bowling Supply Company
+Business Type
+Distributor
+Industry
+Bowling supply distribution
+Annual Sales
+$25,000,000
+POS System
+Keystroke for test only
+Accounting System
+QuickBooks for test only
+Inventory Locations
+Main warehouse
+Review Cadence
+Weekly
+Fiscal Week End
+Saturday
+Review Date
+2026-06-06
+Funding Window
+2026-06-06 to 2026-07-06
+Cash Reserve
+$250,000
+Owner Approval Threshold
+$40,000
+Vendor Concentration Warning
+40% of core available funding
+Emergency Holdback
+$10,000
+Output Status Expected
+Approved with Limitations
+3. Financial Snapshot Test Data
+Cash field
+Value
+Cash on Hand
+$600,000
+Restricted Cash
+$0
+Available Operating Cash
+$600,000
+Protected Cash Reserve
+$250,000
+Manual Cash Adjustment
+$0
+Cash Confidence
+High Confidence
+Outflow Type
+Amount
+Due Date
+Required Status
+Can Delay
+Payroll
+$120,000
+2026-06-14
+Must-Pay
+No
+Rent / Facility
+$28,000
+2026-06-15
+Must-Pay
+No
+Insurance
+$12,000
+2026-06-20
+Must-Pay
+No
+Debt Payment
+$20,000
+2026-06-25
+Must-Pay
+No
+Utilities / Operating
+$15,000
+2026-06-28
+Must-Pay
+No
+Total
+$195,000
+Vendor
+Amount Due
+Due Date
+Aging Bucket
+Critical
+Can Delay
+LaneMaster Supplies
+$55,000
+2026-06-12
+Current
+Yes
+No
+ProShop Accessories
+$40,000
+2026-06-18
+Current
+No
+Unknown
+StrikeLine Products
+$65,000
+2026-06-24
+1-30
+Yes
+No
+PinDeck Parts
+$30,000
+2026-07-02
+Current
+No
+Yes
+AP Pressure Total
+$190,000
+Include unless safely deferrable
+Customer
+Expected Amount
+Expected Date
+Confidence
+Inclusion
+Metro Bowling Group
+$80,000
+2026-06-13
+High
+100% = $80,000
+Regional Pro Shops
+$70,000
+2026-06-21
+Medium
+60% = $42,000
+East Coast Lanes
+$50,000
+2026-06-29
+Low
+20% = $10,000
+Family Fun Centers
+$35,000
+2026-07-03
+High
+100% = $35,000
+Included Expected Inflows
+$167,000
+PO
+Vendor
+Remaining Open
+Commitment Status
+Expected Receipt
+Treatment
+PO-6001
+LaneMaster Supplies
+$40,000
+Vendor Confirmed
+2026-06-19
+Include
+PO-6002
+ProShop Accessories
+$25,000
+Sent but Changeable
+2026-06-28
+Include with caution
+PO-6003
+PinDeck Parts
+$20,000
+Received but Not Billed
+2026-06-10
+Treat as AP exposure risk
+PO-6004
+StrikeLine Products
+$18,000
+Draft / Not Sent
+2026-07-05
+Purchase candidate, not committed exposure
+Committed Open PO Exposure
+$85,000
+4. Expected Funding Calculations
+Calculation
+Expected result
+Core Available Inventory Funding
+$600,000 + $167,000 - $250,000 - $195,000 - $190,000 - $85,000 = $47,000
+Emergency / Service Holdback
+$10,000
+Core Funding Available for Allocation
+$37,000
+LOC Approved Inventory Capacity
+$75,000
+Factoring Approved Net Proceeds
+$66,000
+Supplemental Funding Capacity
+$141,000
+Total Potential Inventory Funding
+$188,000
+5. Purchase Candidate Test Data
+Candidate
+Source
+Vendor
+Type
+Requested
+Need Reason
+Evidence
+Urgency
+PC-001
+RSE Recommendation
+LaneMaster Supplies
+Replenishment
+$30,000
+Fast movers below Min
+Strong RSE support
+High
+PC-002
+Customer Backorder
+StrikeLine Products
+Backorder
+$25,000
+Key customer order
+Confirmed backorder
+High
+PC-003
+Keystroke Suggested Order
+ProShop Accessories
+Normal replenishment
+$35,000
+Reorder report
+Keystroke + moderate demand
+Medium
+PC-004
+Vendor Offer / Promo Buy
+LaneMaster Supplies
+Promo buy
+$60,000
+Extended terms + discount
+Mixed RSE support
+Medium
+PC-005
+Buyer Request
+PinDeck Parts
+Strategic item
+$18,000
+Product line support
+Buyer note only
+Medium
+PC-006
+Vendor Offer / Promo Buy
+SlowLane Novelties
+Promo buy
+$22,000
+Discount offer
+Weak demand support
+Low
+PC-007
+Existing Draft PO
+StrikeLine Products
+Draft PO
+$18,000
+Draft/not sent
+Draft PO-6004
+Medium
+Total
+$208,000
+6. RSE, Vendor Offer, and Keystroke Test Data
+SKU Group
+Vendor
+RSE Classification
+Signal
+Amount
+Candidate
+Bowling Ball Core Fast Movers
+LaneMaster
+Fast-Moving / High Confidence
+Below Min / Replenish
+$30,000
+PC-001
+Lane Cleaner High Velocity
+StrikeLine
+Fast-Moving / High Confidence
+Customer service risk
+$25,000
+PC-002
+Pro Shop Accessories Moderate
+ProShop
+Moderate-Moving
+Replenish cautiously
+$35,000
+PC-003
+LaneMaster Promo Fast Items
+LaneMaster
+Fast-Moving
+Supported
+$28,000
+PC-004
+LaneMaster Promo Slow Items
+LaneMaster
+Slow-Moving / Overstock Risk
+Reduce / avoid
+$32,000
+PC-004
+PinDeck Specialty Parts
+PinDeck
+Moderate / Strategic
+Review
+$18,000
+PC-005
+SlowLane Novelty Items
+SlowLane
+Slow-Moving / Weak Demand
+Avoid
+$22,000
+PC-006
+Vendor Offer
+Required Amount
+Normal Need
+Incremental
+Terms/Benefit
+Expected Decision
+LaneMaster Supplies
+$60,000
+$28,000
+$32,000
+8% discount; Net 30 becomes 30/60/90; fast items 45 day sell-through; slow items 180+ days
+Take Partial Vendor Offer: fund $28,000 fast portion; exclude/delay $32,000 slow portion
+SlowLane Novelties
+$22,000
+$0-$5,000
+$17,000+
+15% discount; Net 30; 240+ day sell-through
+Decline Vendor Offer or Hold Until More Data
+Item
+Vendor
+QOH
+Min
+Max
+Suggested Qty
+Amount
+Candidate / Expected
+KS-BALL-100
+LaneMaster
+10
+25
+60
+30
+$30,000
+Supports PC-001
+KS-CLEAN-210
+StrikeLine
+2
+15
+40
+25
+$25,000
+Supports PC-002
+KS-ACC-330
+ProShop
+40
+50
+90
+35
+$35,000
+Supports PC-003
+KS-NOV-700
+SlowLane
+200
+50
+100
+0
+$0
+Does not support PC-006
+7. Expected Funding Allocation and Decision Board
+Priority
+Candidate
+Core Cash Allocation
+Reason
+1
+PC-001
+$30,000
+Fast-moving RSE-supported replenishment
+2
+PC-002
+$7,000
+Partial core funding for confirmed backorder
+Holdback
+Emergency / Service Reserve
+$10,000
+Preserve urgent needs
+Candidate
+Requested
+Recommended Funded
+Delayed / Excluded
+Funding Source
+IFM Decision
+Approval Needed
+Reason
+PC-001
+$30,000
+$30,000
+$0
+Operating Cash
+Approve
+Reviewer
+Fast-moving, RSE-supported, below Min
+PC-002
+$25,000
+$25,000
+$0
+Cash + LOC/Factoring
+Approve with Caution
+Owner/Financing
+Confirmed backorder; cash partially available
+PC-003
+$35,000
+$35,000
+$0
+LOC/Expected Inflows
+Approve with Caution
+Reviewer/Owner if LOC used
+Reorder + moderate demand
+PC-004
+$60,000
+$28,000
+$32,000
+Vendor Terms / possible LOC
+Take Partial Vendor Offer
+Owner
+Fast portion supported; slow portion excluded
+PC-005
+$18,000
+$0 or $18,000
+$18,000 or $0
+Owner decision
+Owner Approval Required
+Owner
+Strategic exception requires approval
+PC-006
+$22,000
+$0
+$22,000
+None
+Decline Vendor Offer
+Reviewer
+Slow-moving, weak demand
+PC-007
+$18,000
+$0
+$18,000
+None
+Hold Until More Data
+Reviewer
+Draft PO, lower priority, avoid duplicate
+8. Expected Customer Summary and Warnings
+Expected customer summary should state: core funding is $47,000, holdback is $10,000, immediate core allocation is $37,000, supplemental capacity is $141,000 with approval, purchase requests total $208,000, top priority is PC-001, PC-002 requires supplemental approval, PC-004 should be partial, PC-006 should be declined/held, and buyer action occurs outside IFM after approval.
+Expected warning
+Applies to
+Supplemental funding required
+PC-002, PC-003, possibly PC-004
+Vendor concentration risk
+LaneMaster exposure
+Vendor deal not automatically good
+PC-004 and PC-006
+Strategic exception requires approval
+PC-005
+Draft PO is not committed exposure
+PC-007 / PO-6004
+Buyer action outside IFM
+All approved decisions
+9. Source Document / Report Mapping for Test
+Test data area
+Test source
+Equivalent alternative sources
+Cash
+QuickBooks / bank report
+Sage, NetSuite, ERP, bank portal, Excel, manual
+AP
+QuickBooks AP Aging
+Sage AP Aging, NetSuite Open Bills, ERP AP report, Excel AP schedule
+AR
+QuickBooks AR Aging
+Sage AR Aging, ERP AR report, collections schedule
+Inventory
+Keystroke Inventory Export
+ERP inventory report, WMS export, POS export, Excel
+Suggested Orders
+Keystroke Reorder Report
+ERP reorder report, buyer worksheet, RSE recommendation
+Open POs
+Keystroke Open PO Report
+ERP PO report, purchasing system, Excel PO log
+Backorders
+Keystroke Backorder Report
+ERP order report, sales order report, buyer worksheet
+RSE Signals
+RSE output
+If unavailable, use other evidence at lower confidence
+Vendor Offers
+Vendor promo sheet
+Vendor email, quote, PDF, buyer entry
+LOC
+Bank LOC report
+Bank portal, borrowing-base report, management entry
+Factoring
+Factor quote
+Factor portal, eligible AR schedule, management entry
+10. Test Pass / Fail Matrix
+#
+Test Area
+Expected Result
+Pass Condition
+Fail Condition
+Severity
+1
+Core Funding Calculation
+$47,000
+Calculation matches expected
+Different without reason
+Critical
+2
+Emergency Holdback
+$10,000
+Holdback preserved
+Allocates full $47k without reason
+High
+3
+Core Allocation
+$37,000
+Core minus holdback
+Treats full $47k allocatable
+High
+4
+Supplemental Funding
+$141,000
+LOC + factoring separate
+Combines with cash
+Critical
+5
+Total Potential Funding
+$188,000
+Core + supplemental
+Misstates total
+High
+6
+Financing Separation
+LOC/factoring separate
+Labels as supplemental and approval-required
+Presents as cash
+Critical
+7
+AR Confidence
+$167,000
+Applies 100/60/20%
+Counts all AR at 100%
+High
+8
+Required Outflows
+$195,000
+Subtracts must-pay items
+Ignores obligations
+Critical
+9
+AP Pressure
+$190,000
+Includes AP due
+Ignores AP
+Critical
+10
+Open PO Exposure
+$85,000
+Includes committed exposure
+Excludes or double-counts
+Critical
+11
+Draft PO Treatment
+PO-6004 candidate only
+Not committed exposure
+Double-counts draft PO
+High
+12
+Purchase Candidate Total
+$208,000
+Totals PCs 1-7
+Omission/duplicate
+High
+13
+RSE Funding Priority
+PC-001 high priority
+Ranks high
+Ignores RSE
+High
+14
+Backorder Priority
+PC-002 high priority
+Recognizes service risk
+Treats as low priority
+High
+15
+Reorder Treatment
+Evidence not approval
+Requires IFM review
+Auto-approves
+Critical
+16
+LaneMaster Promo
+Partial offer
+Funds $28k and excludes $32k
+Approves full promo
+High
+17
+SlowLane Promo
+Decline/Hold
+Rejects or holds
+Funds discount-only buy
+High
+18
+Fundable vs Recommended
+Separate
+PC-006 fundable but not recommended
+Recommends only because fundable
+Critical
+19
+Vendor Concentration
+Flag LaneMaster
+Shows warning
+No warning
+Medium/High
+20
+Strategic Exception
+PC-005 owner approval
+Requires approval
+Auto-approves
+High
+21
+Owner Approval
+Financing/strategic/high-risk
+Flags approvals
+No required approvals
+Critical
+22
+Data Gaps
+Visible limitations
+Shows weak/medium-confidence issues
+Hides limitations
+Critical
+23
+Customer Summary
+Plain English
+Owner-friendly
+Too technical
+Medium
+24
+Internal Detail
+Reviewer sees detail
+Approves safely
+Insufficient detail
+High
+25
+Execution Boundary
+No PO execution implied
+Buyer action outside IFM
+Output implies PO created
+Critical
+26
+Keystroke File Rule
+.txt tab only
+CSV/XLSX fail import-ready
+CSV/XLSX labeled import-ready
+Critical
+27
+Source-Agnostic Mapping
+Accept mapped non-QB/KS
+Maps valid alternate source
+Fails only due to source name
+Critical
+28
+Source Lineage
+Tracked
+Source/report/date/confidence visible
+No lineage
+High
+29
+Confirmed None Exist
+Blank not zero
+Requires confirmation
+Treats blank as zero
+Critical
+30
+Output Visibility
+Sensitive protected
+Internal data removed/approved
+Sensitive leak
+Critical
+11. Critical Failure Rules and Status Labels
+Core funding calculation materially wrong
+Double-counting/ignoring AP, AR, outflows, or open POs
+LOC/factoring treated as cash
+IFM implies it executed PO/payment/borrowing/factoring
+Keystroke import-ready file rule violated
+Missing data treated as zero
+Vendor deals auto-approved because of discount/terms
+RSE ignored in promo-buy priority
+Sensitive data exposed
+Source-agnostic mapping fails solely because source is not QuickBooks/Keystroke
+Status
+Meaning
+Pass
+Output matches expected result
+Pass with Notes
+Acceptable but minor improvement/limitation noted
+Fail - Correction Required
+Must fix before pilot
+Blocked - Missing Data/Template
+Cannot test because data/template unavailable
+Not Applicable
+Does not apply
+12. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Full test data, expected results, source mapping, pass/fail matrix included
+Gaps
+Pass with carry-forward
+Actual upload workbooks/files and exact Keystroke template are future execution items
+Errors
+Pass
+Expected results align with prior logic
+Recommendations
+Included
+Use matrix directly in Document 8 acceptance
+Ease of use
+Pass
+Pass/fail matrix makes testing practical
+

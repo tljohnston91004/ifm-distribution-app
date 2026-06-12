@@ -1,0 +1,227 @@
+﻿
+Document 2 - IFM-Distribution V1.5 Cursor Build Instruction Brief
+Full detailed consolidated version
+Status: Full detailed consolidated working document. All approved addenda have been merged into the main body. Superseded wording has been removed.
+1. Plain-English Product Definition
+Inventory Funding Manager - Distribution helps a distributor decide how much inventory can be responsibly funded now, which purchase candidates deserve that funding first, which should be reduced, split, delayed, held, or declined, and which decisions require reviewer or owner approval.
+Locked Hard Rules
+IFM is source-agnostic. QuickBooks and Keystroke are example/test sources, not required systems.
+IFM maps source data into standard IFM data domains before calculations run.
+IFM does not create, send, modify, cancel, pay, borrow, or factor automatically in V1.5.
+Funding approval is separate from purchase approval and separate from official PO action.
+Buyer action in Keystroke or another purchasing system happens outside IFM in V1.5.
+LOC and factoring are supplemental funding, not operating cash.
+Vendor deals, discounts, free freight, and extended terms are not automatically good.
+RSE identifies replenishment need and inventory classification; IFM allocates funding priority.
+Blank or missing data must not be treated as zero unless confirmed none exist.
+Any file intended for Keystroke upload or re-import must be tab-delimited and end in .txt.
+CSV/XLSX may be used for review, mapping, QA, internal analysis, or customer review, but not as Keystroke import-ready files.
+Customer-facing output must protect sensitive internal, financing, AR, AP, and reviewer detail unless approved for display.
+2. Core Business Question
+Based on cash, obligations, AP, AR, open POs, financing options, vendor terms, inventory position, service risk, and purchase evidence, which inventory purchases can we responsibly fund now, reduce, delay, split, or hold?
+3. Division of Responsibility
+Question
+Responsible source/system
+IFM treatment
+What inventory may need buying?
+RSE, reorder report, buyer request, customer backorder, vendor offer, sales forecast
+IFM treats as purchase candidate evidence
+How much funding is available?
+IFM using financial snapshot and funding window
+IFM calculates core and supplemental capacity
+Which purchases get funded first?
+IFM using source evidence, RSE class, demand, cash conversion, risk, approvals
+IFM ranks and allocates funding
+Who approves funding?
+Reviewer/owner depending on threshold/risk/source
+IFM routes for approval and logs decision
+Where official PO action happens?
+Keystroke, ERP, purchasing system, or buyer workflow outside IFM
+IFM does not execute POs in V1.5
+4. How IFM Knows What Purchases Need Review
+IFM does not automatically know every item that needs to be purchased. It reviews purchase candidates. A purchase candidate can exist before an official PO is created.
+Purchase candidate source
+Example
+How IFM uses it
+RSE Recommendation
+Fast-moving item below Min
+High-value purchase evidence and funding-priority signal
+Keystroke or other reorder report
+Suggested reorder quantity by item/vendor
+Purchase candidate source, not automatic approval
+Buyer Request
+Buyer requests vendor/category purchase
+Requires reason, amount, evidence, confidence
+Customer Backorder
+Confirmed customer order needs product
+Strong evidence and service-risk priority
+Vendor Offer / Promo Buy
+Discount, free freight, MOQ, extended terms
+Compare normal need vs offer quantity and cash conversion
+Sales Forecast
+Expected demand or seasonal need
+Evidence quality depends on confidence/support
+Emergency Stock Need
+Service or stockout risk
+May require emergency review and owner approval
+Existing Open PO
+Committed or draft purchase record
+Treat based on commitment status and exposure
+5. Purchase Candidate vs. PO Stages
+Stage
+Meaning
+IFM treatment
+Purchase Candidate / Proposed Purchase
+Purchase being considered before official PO exists
+Preferred IFM review point; can approve/reduce/split/delay/hold
+Draft / Proposed PO
+Prepared but not sent or committed
+Treat as candidate unless committed
+Open PO
+Created but not fully received/closed/paid
+Review as exposure and determine if changeable/cancelable
+Received / Payable Purchase
+Inventory received or invoice/bill exists
+Treat as AP/cash obligation, not new purchase approval
+6. Funding Logic Overview
+Funding layer
+Inputs
+Output
+Layer 1 - Core Operating Cash Funding
+Cash + confidence-adjusted inflows - reserve - required outflows - AP pressure - committed open PO exposure
+Core Available Inventory Funding
+Layer 2 - Approved Supplemental Funding
+Approved LOC capacity + approved net factoring proceeds + other approved short-term funding
+Supplemental Funding Capacity
+Layer 3 - Total Potential Funding
+Core Available Inventory Funding + Supplemental Funding Capacity
+Total Potential Inventory Funding
+Allocation Layer
+Funding capacity + purchase candidates + priority rules + holdback
+Recommended funded/delayed/excluded amounts
+7. Source-Agnostic Data Intake Rule
+IFM must not depend on QuickBooks or Keystroke as required systems. The first test uses them as examples, but equivalent data from other accounting, POS, ERP, WMS, spreadsheet, banking, financing, vendor, RSE, buyer worksheet, or manual sources must be allowed if mapped and validated.
+IFM domain
+Required fields
+Example source documents
+Destination table
+Cash Position
+Cash balance, source date
+Balance sheet, bank report, cash report, management entry
+cash_positions
+Required Outflows
+Payee/type, amount, due date, required status
+Cash requirements schedule, payroll schedule, tax schedule
+required_outflows
+AP / Bills Due
+Vendor, amount due, due date, aging bucket
+AP aging, open bills, AP schedule
+ap_items
+AR / Expected Inflows
+Customer, amount, due date, confidence
+AR aging, collections report, cash forecast
+ar_items
+Financing Sources
+Source, available amount, approval, cost
+LOC statement, borrowing base, factoring quote
+financing_sources, loc_capacity, factoring_options
+Open POs
+PO number, vendor, open amount, status
+Open PO report, purchasing system export
+open_purchase_orders
+Purchase Candidates
+Vendor, amount, source, need reason, urgency
+Reorder report, RSE output, buyer worksheet, vendor offer
+purchase_candidates
+Inventory Snapshot
+SKU, QOH, cost, inventory value, Min/Max
+Inventory export, item master, WMS report
+inventory_snapshots
+RSE Signals
+SKU, classification, confidence, Min/Max signal
+RSE classification export, approved Min/Max output
+rse_signals
+Keystroke/Other Reorder Source
+Item, vendor, QOH, Min, Max, reorder qty, amount
+Keystroke reorder, ERP reorder, buyer worksheet
+keystroke_reorder_sources or generic reorder source
+Vendor Terms
+Vendor, terms, effective date, payment schedule
+Vendor master, agreement, AP terms sheet
+vendor_terms
+Vendor Offers
+Offer type, terms, expiration, required amount, benefit
+Vendor email, quote, flyer, PDF, buyer entry
+vendor_offers, vendor_offer_items
+8. Vendor Offer / Promo-Buy Mechanism
+IFM must include Vendor Offer / Promo-Buy Intake so a user can enter discounts, extended terms, free freight, rebates, MOQ requirements, special costs, seasonal buys, and expiration dates.
+Vendor offer workflow step
+Required IFM behavior
+Enter offer
+Capture vendor, offer type, amount required, normal need, terms, benefit, expiration
+Link to candidate
+Create or modify purchase candidate, open PO, or scenario
+Compare normal vs offer purchase
+Calculate incremental purchase amount and inventory burden
+Use RSE classification
+Prioritize fast-moving/replenishment-supported items and restrict slow/overstock items
+Test funding/cash conversion
+Compare operating cash, LOC/factoring, vendor terms, sell-through, payment timing
+Assign decision
+Take full offer, partial offer, approve normal purchase, split, delay, decline, hold, owner approval
+9. RSE Classification Funding Priority Rule
+RSE signal/class
+IFM funding treatment
+Fast-moving / high-confidence / below Min
+Highest priority for funding
+Confirmed customer demand/backorder plus RSE support
+Highest or emergency priority
+Moderate-moving / supported replenishment
+Caution/medium priority; consider partial funding
+Seasonal or uneven demand
+Scenario/cash conversion review; may split/delay
+Slow-moving / overstock / weak demand
+Restrict, delay, exclude, or owner approval
+No RSE data
+Proceed with other evidence at lower confidence if responsible
+10. Fundable vs. Recommended
+A purchase can be technically fundable but not recommended. IFM must show both funding status and recommendation status.
+Concept
+Meaning
+Example
+Fundable
+Business has cash, inflows, LOC, factoring, or terms that could support it
+Promo buy could be funded with LOC
+Recommended
+Purchase makes sense based on demand, inventory class, service risk, margin, cash conversion, confidence
+Fast-moving below-Min replenishment
+Fundable but not recommended
+Money exists but purchase is weak or risky
+Slow-moving promo buy with discount only
+11. V1.5 Developer Instructions
+Build standard IFM domains first; do not build QuickBooks-only or Keystroke-only logic.
+Create source_systems, source_documents, upload_batches, field_mappings, and standard_ifm_domains structures.
+Build calculations from standardized IFM tables, not raw source-system files.
+Keep thresholds configurable: reserve, owner approval, AR confidence factors, vendor concentration, holdback, material purchase amount.
+Build the Purchase Funding Decision Board as the main working screen.
+Use Document 7 sample test data and Document 8 acceptance checklist before pilot.
+12. Internal Review Summary
+Review area
+Result
+Notes
+Completeness
+Pass
+Defines product, source relationship, workflows, funding logic, vendor offers, RSE link, and V1.5 boundaries
+Gaps
+Pass
+Detailed fields/formulas are in Documents 3 and 4
+Errors
+Pass
+No-auto-execution and source-agnostic rules are clear
+Recommendations
+Included
+Build in stages and test after each stage
+Ease of use
+Pass
+Responsibility table and workflow tables clarify user/developer understanding
+
