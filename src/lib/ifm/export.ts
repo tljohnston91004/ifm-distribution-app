@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
+import { isReviewerApproved } from "@/lib/ifm/reviewer-approval";
 
-export type ExportType = "decision" | "funding-summary" | "allocation" | "data-gap" | "vendor-offer";
+export type ExportType = "decision" | "funding-summary" | "allocation" | "data-gap" | "vendor-offer" | "po-handoff";
 export type ExportFormat = "csv" | "tsv";
 
 export interface ExportFile {
@@ -54,7 +55,7 @@ async function buildDecisionRows(runId: string) {
       need_reason: c.needReason,
       requested_amount: c.estimatedTotalCost,
       recommended_funded_amount: alloc?.allocatedAmount ?? dn.approvedAmount,
-      approved_funding_amount: "",
+      approved_funding_amount: isReviewerApproved(dn) ? dn.approvedAmount : "",
       actual_ordered_amount: "",
       received_amount: "",
       ap_billed_amount: "",
@@ -225,12 +226,67 @@ const VENDOR_OFFER_COLUMNS = [
   "recommended_excluded_amount", "funding_source", "recommendation", "approval_required", "decision_reason",
 ];
 
+// PO Writer Handoff — reviewer-approved lines only, for buyer/PO creation.
+async function buildPoHandoffRows(runId: string) {
+  const run = await prisma.ifmRun.findUniqueOrThrow({
+    where: { id: runId },
+    include: {
+      purchaseDecisions: { include: { candidate: true } },
+      fundingAllocations: true,
+    },
+  });
+  const allocByCandidate = new Map(run.fundingAllocations.map((a) => [a.purchaseCandidateId, a]));
+
+  return run.purchaseDecisions
+    .filter((dn) => isReviewerApproved(dn))
+    .map((dn) => {
+      const c = dn.candidate;
+      const alloc = allocByCandidate.get(dn.purchaseCandidateId);
+      const qty = c.proposedQuantity ?? "";
+      const unitCost = c.estimatedUnitCost ?? "";
+      return {
+        ifm_run_id: run.id,
+        review_date: fmtDate(run.reviewDate),
+        vendor_name: c.vendorName,
+        sku_or_item: c.skuOrItemId ?? "",
+        proposed_quantity: qty,
+        unit_cost: unitCost,
+        requested_amount: c.estimatedTotalCost,
+        recommended_funded_amount: alloc?.allocatedAmount ?? 0,
+        reviewer_approved_amount: dn.approvedAmount,
+        ifm_decision_label: dn.systemDecisionLabel,
+        funding_source: alloc?.fundingSource ?? "Not Funded",
+        reviewer_approval_status: "Approved for PO",
+        po_writer_note: `Order up to $${dn.approvedAmount.toFixed(2)} for SKU ${c.skuOrItemId ?? "—"}.`,
+        export_use_status: "PO Writer Handoff",
+      };
+    });
+}
+
+const PO_HANDOFF_COLUMNS = [
+  "ifm_run_id",
+  "review_date",
+  "vendor_name",
+  "sku_or_item",
+  "proposed_quantity",
+  "unit_cost",
+  "requested_amount",
+  "recommended_funded_amount",
+  "reviewer_approved_amount",
+  "ifm_decision_label",
+  "funding_source",
+  "reviewer_approval_status",
+  "po_writer_note",
+  "export_use_status",
+];
+
 const CONFIG: Record<ExportType, { columns: string[]; rows: (runId: string) => Promise<Array<Record<string, unknown>>>; label: string }> = {
   decision: { columns: DECISION_COLUMNS, rows: buildDecisionRows, label: "PurchaseFundingDecision" },
   "funding-summary": { columns: FUNDING_SUMMARY_COLUMNS, rows: buildFundingSummaryRows, label: "FundingSummary" },
   allocation: { columns: ALLOCATION_COLUMNS, rows: buildAllocationRows, label: "FundingAllocation" },
   "data-gap": { columns: DATA_GAP_COLUMNS, rows: buildDataGapRows, label: "DataGap" },
   "vendor-offer": { columns: VENDOR_OFFER_COLUMNS, rows: buildVendorOfferRows, label: "VendorOffer" },
+  "po-handoff": { columns: PO_HANDOFF_COLUMNS, rows: buildPoHandoffRows, label: "PoWriterHandoff" },
 };
 
 export async function buildExport(runId: string, type: ExportType, format: ExportFormat): Promise<ExportFile> {

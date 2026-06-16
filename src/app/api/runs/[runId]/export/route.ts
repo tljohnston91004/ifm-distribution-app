@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildExport, type ExportFormat, type ExportType } from "@/lib/ifm/export";
 
-const TYPES: ExportType[] = ["decision", "funding-summary", "allocation", "data-gap", "vendor-offer"];
+const TYPES: ExportType[] = ["decision", "funding-summary", "allocation", "data-gap", "vendor-offer", "po-handoff"];
 
 export async function GET(req: Request, { params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;

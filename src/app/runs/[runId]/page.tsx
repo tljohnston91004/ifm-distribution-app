@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { CalculateButton } from "@/components/RunActions";
+import { CalculateButton, ImportRseButton } from "@/components/RunActions";
+import DecisionBoard from "@/components/DecisionBoard";
 import { buildBanners } from "@/lib/ifm/banners";
+import { fetchRseReadyPurchases } from "@/lib/ifm/rse-import";
+import { buildVendorNameMapFromRse, resolveCandidateVendorName } from "@/lib/ifm/vendor-names";
+import { buildVendorSummaries } from "@/lib/ifm/vendor-summary";
+import { isReviewerApproved } from "@/lib/ifm/reviewer-approval";
 import { usd, shortDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -19,24 +24,6 @@ function Card({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: "10px 10px",
-  fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
-  color: "var(--muted)",
-  borderBottom: "1px solid var(--border)",
-  whiteSpace: "nowrap",
-};
-const td: React.CSSProperties = { padding: "10px 10px", borderBottom: "1px solid var(--border)", fontSize: 13, verticalAlign: "top" };
-
-function decisionColor(label: string): string {
-  if (/Approve\b/.test(label) || label === "Take Full Vendor Offer") return "var(--good)";
-  if (/Decline|Hold|Delay/.test(label)) return "var(--bad)";
-  return "var(--warn)";
-}
-
 export default async function RunWorkspace({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
   const run = await prisma.ifmRun.findUnique({
@@ -47,7 +34,11 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
       supplementalCalc: true,
       fundingAllocations: true,
       dataGaps: true,
-      purchaseDecisions: { include: { candidate: true }, orderBy: { id: "asc" } },
+      purchaseDecisions: {
+        include: { candidate: { include: { sources: true } } },
+        orderBy: { id: "asc" },
+      },
+      _count: { select: { purchaseCandidates: true, cashPositions: true } },
     },
   });
   if (!run) notFound();
@@ -75,6 +66,74 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
 
   const coreAllocatable = Math.max(0, (fc?.coreAvailableInventoryFunding ?? 0) - holdback);
 
+  let vendorNameMap = new Map<string, string>();
+  if (run.purchaseDecisions.length > 0) {
+    try {
+      const rse = await fetchRseReadyPurchases();
+      vendorNameMap = buildVendorNameMapFromRse(rse.lines);
+    } catch {
+      // RSE offline — fall back to stored vendor names on candidates.
+    }
+  }
+
+  const itemRows = rows.map(({ dn, alloc }) => {
+    const sourceRef = dn.candidate.sources[0]?.sourceReferenceId ?? null;
+    const vendorName = resolveCandidateVendorName(dn.candidate, sourceRef, vendorNameMap);
+    const approval = dn.ownerApprovalRequired
+      ? "Owner"
+      : dn.financingApprovalRequired
+      ? "Financing"
+      : "Reviewer";
+    const unfunded = (alloc?.unfundedAmount ?? 0) + dn.delayedAmount + dn.excludedAmount;
+    const recommended = alloc?.allocatedAmount ?? 0;
+    const reviewerApproved = isReviewerApproved(dn);
+    const canReviewerApprove =
+      !dn.ownerApprovalRequired &&
+      !dn.financingApprovalRequired &&
+      !/Decline|Hold Until|Delay Purchase/.test(dn.systemDecisionLabel) &&
+      recommended > 0;
+    return {
+      id: dn.candidate.id,
+      decisionId: dn.id,
+      priority: alloc?.allocationPriority ?? "—",
+      vendorName,
+      sku: dn.candidate.skuOrItemId ?? dn.candidate.needReason,
+      source: dn.candidate.sourceOfRequest,
+      requested: dn.candidate.estimatedTotalCost,
+      recommended,
+      unfunded,
+      decision: dn.systemDecisionLabel,
+      fundingSource: alloc?.fundingSource ?? "Not Funded",
+      approval,
+      reason: dn.decisionReason,
+      reviewerApproved,
+      approvedAmount: dn.approvedAmount,
+      canReviewerApprove,
+    };
+  });
+
+  const handoffSummary = {
+    approvedLines: run.purchaseDecisions.filter((d) => isReviewerApproved(d)).length,
+    approvedDollars: run.purchaseDecisions
+      .filter((d) => isReviewerApproved(d))
+      .reduce((s, d) => s + d.approvedAmount, 0),
+  };
+
+  const vendorRows = buildVendorSummaries(
+    rows.map(({ dn, alloc }) => ({
+      decision: dn,
+      alloc: alloc
+        ? {
+            allocatedAmount: alloc.allocatedAmount,
+            unfundedAmount: alloc.unfundedAmount,
+            allocationPriority: alloc.allocationPriority,
+            fundingSource: alloc.fundingSource,
+          }
+        : null,
+    })),
+    vendorNameMap,
+  );
+
   return (
     <main style={{ maxWidth: 1180, margin: "0 auto", padding: "32px 24px 64px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
@@ -89,8 +148,38 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
             {run.company.companyName} · Review {shortDate(run.reviewDate)} · Window {shortDate(run.fundingWindowStart)} → {shortDate(run.fundingWindowEnd)} · <strong style={{ color: "var(--text)" }}>{run.runStatus}</strong>
           </div>
         </div>
-        <CalculateButton runId={run.id} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <ImportRseButton runId={run.id} />
+          <CalculateButton runId={run.id} />
+        </div>
       </header>
+
+      <section
+        style={{
+          marginTop: 16,
+          background: "var(--panel)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          padding: "14px 18px",
+          fontSize: 13,
+        }}
+      >
+        <strong>RSE handoff:</strong>{" "}
+        {run._count.purchaseCandidates === 0 ? (
+          <>
+            No purchase candidates yet. Approve lines in RSE PRE (status{" "}
+            <em>Ready for IFM Review</em>), then click <strong>Import from RSE</strong>.
+          </>
+        ) : (
+          <>
+            {run._count.purchaseCandidates} purchase candidate(s) loaded.
+            {run._count.cashPositions === 0 && (
+              <> Add cash in Prisma Studio (<code>npm run db:studio</code>) before Recalculate.</>
+            )}
+            {run._count.cashPositions > 0 && <> Click <strong>Recalculate</strong> for funding decisions.</>}
+          </>
+        )}
+      </section>
 
       {/* Warning banners — Document 5 §8 */}
       <section style={{ marginTop: 18, display: "grid", gap: 8 }}>
@@ -139,58 +228,19 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
       )}
 
       {/* Purchase Funding Decision Board — Document 6 §5 */}
-      <section style={{ marginTop: 26 }}>
-        <h2 style={{ fontSize: 18 }}>Purchase Funding Decision Board</h2>
-        {rows.length === 0 ? (
+      {rows.length === 0 ? (
+        <section style={{ marginTop: 26 }}>
+          <h2 style={{ fontSize: 18 }}>Purchase Funding Decision Board</h2>
           <p style={{ color: "var(--muted)" }}>No calculated decisions yet. Use Recalculate to run the funding engine.</p>
-        ) : (
-          <div style={{ overflowX: "auto", border: "1px solid var(--border)", borderRadius: 12 }}>
-            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 1000 }}>
-              <thead>
-                <tr>
-                  <th style={th}>#</th>
-                  <th style={th}>Vendor</th>
-                  <th style={th}>Source</th>
-                  <th style={th}>Requested</th>
-                  <th style={th}>Recommended</th>
-                  <th style={th}>Delayed / Unfunded</th>
-                  <th style={th}>IFM Decision</th>
-                  <th style={th}>Funding Source</th>
-                  <th style={th}>Approval</th>
-                  <th style={th}>Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(({ dn, alloc }) => {
-                  const approval = dn.ownerApprovalRequired
-                    ? "Owner"
-                    : dn.financingApprovalRequired
-                    ? "Financing"
-                    : "Reviewer";
-                  const unfunded = (alloc?.unfundedAmount ?? 0) + dn.delayedAmount + dn.excludedAmount;
-                  return (
-                    <tr key={dn.id}>
-                      <td style={td}>{alloc?.allocationPriority ?? "—"}</td>
-                      <td style={td}>
-                        <div style={{ fontWeight: 600 }}>{dn.candidate.vendorName}</div>
-                        <div style={{ color: "var(--muted)", fontSize: 12 }}>{dn.candidate.skuOrItemId ?? dn.candidate.needReason}</div>
-                      </td>
-                      <td style={td}>{dn.candidate.sourceOfRequest}</td>
-                      <td style={td}>{usd(dn.candidate.estimatedTotalCost)}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>{usd(alloc?.allocatedAmount ?? 0)}</td>
-                      <td style={td}>{usd(unfunded)}</td>
-                      <td style={{ ...td, color: decisionColor(dn.systemDecisionLabel), fontWeight: 600 }}>{dn.systemDecisionLabel}</td>
-                      <td style={td}>{alloc?.fundingSource ?? "Not Funded"}</td>
-                      <td style={td}>{approval}</td>
-                      <td style={{ ...td, color: "var(--muted)", maxWidth: 260 }}>{dn.decisionReason}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+        </section>
+      ) : (
+        <DecisionBoard
+          runId={run.id}
+          itemRows={itemRows}
+          vendorRows={vendorRows}
+          handoffSummary={handoffSummary}
+        />
+      )}
 
       {/* Export Center — Document 6 */}
       <section style={{ marginTop: 26 }}>
@@ -201,6 +251,7 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           {([
+            { type: "po-handoff", label: "PO Writer Handoff" },
             { type: "decision", label: "Purchase Funding Decision" },
             { type: "funding-summary", label: "Funding Summary" },
             { type: "allocation", label: "Funding Allocation" },
