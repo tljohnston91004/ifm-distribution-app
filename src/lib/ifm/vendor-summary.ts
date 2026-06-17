@@ -1,5 +1,5 @@
 import { resolveCandidateVendorName } from "@/lib/ifm/vendor-names";
-import { isReviewerApproved } from "@/lib/ifm/reviewer-approval";
+import { canOverrideApprove, canReviewerApprove, isReviewerApproved } from "@/lib/ifm/reviewer-approval";
 
 export interface DecisionRowInput {
   decision: {
@@ -44,6 +44,8 @@ export interface VendorSummaryRow {
   reviewerApprovedTotal: number;
   reviewerApprovedSkuCount: number;
   canReviewerApprove: boolean;
+  canOverrideApprove: boolean;
+  overrideDecisionIds: string[];
   decisionIds: string[];
 }
 
@@ -54,14 +56,12 @@ function decisionBucket(label: string): "approved" | "caution" | "delayed" | "ot
   return "other";
 }
 
-function canReviewerApprove(decision: {
+function canReviewerApproveLine(decision: {
   ownerApprovalRequired: boolean;
   financingApprovalRequired: boolean;
   systemDecisionLabel: string;
 }): boolean {
-  if (decision.ownerApprovalRequired || decision.financingApprovalRequired) return false;
-  if (/Decline|Hold Until|Delay Purchase/.test(decision.systemDecisionLabel)) return false;
-  return true;
+  return canReviewerApprove(decision);
 }
 
 export function buildVendorSummaries(
@@ -70,7 +70,7 @@ export function buildVendorSummaries(
 ): VendorSummaryRow[] {
   const groups = new Map<
     string,
-    VendorSummaryRow & { _sources: Set<string>; _canApproveLines: number; _decisionIds: string[] }
+    VendorSummaryRow & { _sources: Set<string>; _canApproveLines: number; _decisionIds: string[]; _overrideIds: string[] }
   >();
 
   for (const { decision: dn, alloc } of rows) {
@@ -104,10 +104,13 @@ export function buildVendorSummaries(
         reviewerApprovedTotal: 0,
         reviewerApprovedSkuCount: 0,
         canReviewerApprove: false,
+        canOverrideApprove: false,
+        overrideDecisionIds: [],
         decisionIds: [],
         _sources: new Set<string>(),
         _canApproveLines: 0,
         _decisionIds: [],
+        _overrideIds: [],
       };
       groups.set(key, row);
     }
@@ -128,9 +131,13 @@ export function buildVendorSummaries(
       row.reviewerApprovedTotal += dn.approvedAmount;
       row.reviewerApprovedSkuCount += 1;
     }
-    if (canReviewerApprove(dn) && recommended > 0 && !isReviewerApproved(dn)) {
+    if (canReviewerApproveLine(dn) && recommended > 0 && !isReviewerApproved(dn)) {
       row._canApproveLines += 1;
       row.canReviewerApprove = true;
+    }
+    if (canOverrideApprove(dn) && !isReviewerApproved(dn)) {
+      row.canOverrideApprove = true;
+      row._overrideIds.push(dn.id);
     }
     if (row.delayedCount > row.approvedCount) row.topDecision = "Mixed — review items";
     else if (row.approvedCount === row.skuCount) row.topDecision = "Approve vendor batch";
@@ -139,9 +146,10 @@ export function buildVendorSummaries(
   }
 
   return [...groups.values()]
-    .map(({ _sources, _canApproveLines, _decisionIds, ...row }) => ({
+    .map(({ _sources, _canApproveLines, _decisionIds, _overrideIds, ...row }) => ({
       ...row,
       decisionIds: _decisionIds,
+      overrideDecisionIds: _overrideIds,
       requestedTotal: Math.round(row.requestedTotal * 100) / 100,
       recommendedTotal: Math.round(row.recommendedTotal * 100) / 100,
       unfundedTotal: Math.round(row.unfundedTotal * 100) / 100,

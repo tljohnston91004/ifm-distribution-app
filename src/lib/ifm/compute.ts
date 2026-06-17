@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { runFunding } from "@/lib/ifm/engine";
+import { buildCashRunway } from "@/lib/ifm/runway/build-runway";
 import type {
   CandidateInput,
   FinancingInput,
@@ -10,13 +11,18 @@ import type { RseClassification } from "@/lib/ifm/enums";
 
 function rseClassFromString(value: string | null | undefined): RseClassification | null {
   if (!value) return null;
-  const v = value.toLowerCase();
-  if (v.includes("fast")) return "fast";
-  if (v.includes("overstock")) return "overstock";
-  if (v.includes("slow")) return "slow";
-  if (v.includes("seasonal")) return "seasonal";
-  if (v.includes("moderate")) return "moderate";
-  if (v.includes("none")) return "none";
+  const v = value.trim().toUpperCase();
+  const letter = v.charAt(0);
+  if (letter === "A" || letter === "B") return "fast";
+  if (letter === "C" || letter === "D") return "moderate";
+  if (letter === "E" || letter === "F") return "slow";
+  const lower = value.toLowerCase();
+  if (lower.includes("fast")) return "fast";
+  if (lower.includes("overstock")) return "overstock";
+  if (lower.includes("slow")) return "slow";
+  if (lower.includes("seasonal")) return "seasonal";
+  if (lower.includes("moderate")) return "moderate";
+  if (lower.includes("none")) return "none";
   return null;
 }
 
@@ -159,6 +165,8 @@ export function toFundingRunInput(run: RunWithRelations): FundingRunInput {
     })),
     financingSources,
     candidates,
+    manualCashAdditions: run.manualCashAddition,
+    manualCashReductions: run.manualCashReduction,
   };
 }
 
@@ -176,6 +184,7 @@ export async function computeRun(runId: string) {
     await tx.purchaseDecision.deleteMany({ where: { ifmRunId: runId } });
     await tx.fundingCalculation.deleteMany({ where: { ifmRunId: runId } });
     await tx.supplementalFundingCalculation.deleteMany({ where: { ifmRunId: runId } });
+    await tx.cashRunwaySnapshot.deleteMany({ where: { ifmRunId: runId } });
 
     await tx.fundingCalculation.create({
       data: {
@@ -186,6 +195,8 @@ export async function computeRun(runId: string) {
         requiredOutflowsTotal: funding.core.requiredOutflowsTotal,
         apPressureTotal: funding.core.apPressureTotal,
         openPoExposureTotal: funding.core.openPoExposureTotal,
+        manualCashAdditions: funding.core.manualCashAdditions,
+        manualCashReductions: funding.core.manualCashReductions,
         coreAvailableInventoryFunding: funding.core.coreAvailableInventoryFunding,
         supplementalFundingCapacity: funding.supplemental.supplementalFundingCapacity,
         totalPotentialInventoryFunding: funding.totalPotentialInventoryFunding,
@@ -242,6 +253,46 @@ export async function computeRun(runId: string) {
       where: { id: runId },
       data: {
         runStatus: readiness.label === "Not Ready" ? "Not Ready - Critical Data Missing" : "Calculation Complete",
+      },
+    });
+
+    const settingsRow = run.company.reviewSettings[0];
+    const runwayWeeks = run.runwayWeeks || settingsRow?.runwayWeeks || 13;
+    const rseBySku = new Map(run.rseSignals.map((s) => [s.skuOrItemId, s]));
+    const runway = buildCashRunway({
+      reviewDate: run.reviewDate,
+      runwayWeeks,
+      startingCash: funding.core.cashOnHand + run.manualCashAddition - run.manualCashReduction,
+      protectedReserve: funding.core.protectedCashReserve,
+      candidates: run.purchaseCandidates.map((c) => ({
+        id: c.id,
+        vendorName: c.vendorName,
+        skuOrItemId: c.skuOrItemId,
+        estimatedTotalCost: c.estimatedTotalCost,
+        orderTerms: c.orderTerms,
+        termsStatus: c.termsStatus,
+        approvedClass: rseBySku.get(c.skuOrItemId ?? "")?.rseClassification ?? null,
+        expectedPurchaseDate: c.expectedPurchaseDate,
+      })),
+      sellThroughDaysJson: settingsRow?.sellThroughDaysJson ?? null,
+      factoringActive: settingsRow?.factoringActive ?? false,
+      factoringAdvanceRate: settingsRow?.factoringAdvanceRate ?? 0.8,
+      factoringReserveRate: settingsRow?.factoringReserveRate ?? 0.2,
+      factoringAdvanceLagDays: settingsRow?.factoringAdvanceLagDays ?? 1,
+      typicalCustomerPayDays: settingsRow?.typicalCustomerPayDays ?? 30,
+      collectionLagDays: settingsRow?.collectionLagDays ?? 0,
+    });
+
+    await tx.cashRunwaySnapshot.create({
+      data: {
+        ifmRunId: runId,
+        runwayWeeks,
+        startingCash: runway.weeks[0]?.openingBalance ?? funding.core.cashOnHand,
+        minCashBalance: runway.minCashBalance,
+        minCashWeekIndex: runway.minCashWeekIndex,
+        belowReserveFlag: runway.belowReserveFlag,
+        weeksJson: JSON.stringify(runway.weeks),
+        tailCommitmentsJson: JSON.stringify(runway.tailCommitments),
       },
     });
   });

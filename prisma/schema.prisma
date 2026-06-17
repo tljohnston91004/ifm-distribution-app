@@ -52,6 +52,11 @@ model IfmRun {
   revisedDate       DateTime? @map("revised_date")
   createdAt         DateTime  @default(now()) @map("created_at")
   createdBy         String    @default("pilot-user") @map("created_by")
+  // Management funding adjustments not in source systems (Document 4 §4 manual cash).
+  manualCashAddition  Float   @default(0) @map("manual_cash_addition")
+  manualCashReduction Float   @default(0) @map("manual_cash_reduction")
+  fundingAdjustmentNote String? @map("funding_adjustment_note")
+  runwayWeeks         Int     @default(13) @map("runway_weeks")
 
   cashPositions       CashPosition[]
   requiredOutflows    RequiredOutflow[]
@@ -66,6 +71,7 @@ model IfmRun {
   vendorOffers        VendorOffer[]
   fundingCalculation  FundingCalculation?
   supplementalCalc    SupplementalFundingCalculation?
+  cashRunwaySnapshot  CashRunwaySnapshot?
   fundingAllocations  FundingAllocation[]
   purchaseDecisions   PurchaseDecision[]
   dataGaps            DataGap[]
@@ -91,6 +97,18 @@ model ReviewSettings {
   emergencyHoldbackAmount  Float    @default(0) @map("emergency_holdback_amount")
   holdbackPercent          Float    @default(0.10) @map("holdback_percent")
   approvalExpirationDays   Int      @default(7) @map("approval_expiration_days")
+  runwayWeeks              Int      @default(13) @map("runway_weeks")
+  collectionLagDays        Int      @default(0) @map("collection_lag_days")
+  typicalCustomerPayDays   Int      @default(30) @map("typical_customer_pay_days")
+  factoringActive          Boolean  @default(false) @map("factoring_active")
+  factoringAdvanceRate     Float    @default(0.8) @map("factoring_advance_rate")
+  factoringReserveRate     Float    @default(0.2) @map("factoring_reserve_rate")
+  factoringFeePercent      Float    @default(0) @map("factoring_fee_percent")
+  factoringAdvanceLagDays  Int      @default(1) @map("factoring_advance_lag_days")
+  chargebackTriggerType    String?  @map("chargeback_trigger_type")
+  chargebackTriggerDays    Int?     @map("chargeback_trigger_days")
+  sellThroughDaysJson      String   @default("{\"A\":35,\"B\":50,\"C\":75,\"D\":120,\"E\":180,\"F\":240}") @map("sell_through_days_json")
+  locActive                Boolean  @default(false) @map("loc_active")
   createdAt                DateTime @default(now()) @map("created_at")
 
   @@map("review_settings")
@@ -344,6 +362,16 @@ model PurchaseCandidate {
   urgencyLevel       String   @default("medium") @map("urgency_level") // low | medium | high | emergency
   requestedBy        String?  @map("requested_by")
   dataConfidence     String   @default("Medium Confidence") @map("data_confidence")
+  standardVendorTerms String? @map("standard_vendor_terms")
+  orderTerms          String? @map("order_terms")
+  termsStatus         String  @default("pending") @map("terms_status")
+  orderDiscountScope  String? @map("order_discount_scope")
+  orderDiscountType   String? @map("order_discount_type")
+  orderDiscountValue  Float?  @map("order_discount_value")
+  orderDiscountNote   String? @map("order_discount_note")
+  standardUnitCost    Float?  @map("standard_unit_cost")
+  paymentScheduleJson String? @map("payment_schedule_json")
+  expectedPurchaseDate DateTime? @map("expected_purchase_date")
 
   sources     PurchaseCandidateSource[]
   allocations FundingAllocation[]
@@ -483,6 +511,8 @@ model FundingCalculation {
   requiredOutflowsTotal       Float    @map("required_outflows_total")
   apPressureTotal             Float    @map("ap_pressure_total")
   openPoExposureTotal         Float    @map("open_po_exposure_total")
+  manualCashAdditions         Float    @default(0) @map("manual_cash_additions")
+  manualCashReductions        Float    @default(0) @map("manual_cash_reductions")
   coreAvailableInventoryFunding Float  @map("core_available_inventory_funding")
   supplementalFundingCapacity Float    @map("supplemental_funding_capacity")
   totalPotentialInventoryFunding Float @map("total_potential_inventory_funding")
@@ -492,6 +522,22 @@ model FundingCalculation {
   createdAt                   DateTime @default(now()) @map("created_at")
 
   @@map("funding_calculations")
+}
+
+model CashRunwaySnapshot {
+  id                  String   @id @default(uuid()) @map("cash_runway_snapshot_id")
+  ifmRunId            String   @unique @map("ifm_run_id")
+  run                 IfmRun   @relation(fields: [ifmRunId], references: [id], onDelete: Cascade)
+  runwayWeeks         Int      @map("runway_weeks")
+  startingCash        Float    @map("starting_cash")
+  minCashBalance      Float    @map("min_cash_balance")
+  minCashWeekIndex    Int      @map("min_cash_week_index")
+  belowReserveFlag    Boolean  @default(false) @map("below_reserve_flag")
+  weeksJson           String   @map("weeks_json")
+  tailCommitmentsJson String   @default("[]") @map("tail_commitments_json")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("cash_runway_snapshots")
 }
 
 model SupplementalFundingCalculation {

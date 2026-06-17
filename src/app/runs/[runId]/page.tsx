@@ -3,11 +3,19 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { CalculateButton, ImportRseButton } from "@/components/RunActions";
 import DecisionBoard from "@/components/DecisionBoard";
+import FundingAdjustmentPanel from "@/components/FundingAdjustmentPanel";
+import CashRunwayPanel from "@/components/CashRunwayPanel";
+import CompanyFinancingPanel from "@/components/CompanyFinancingPanel";
 import { buildBanners } from "@/lib/ifm/banners";
 import { fetchRseReadyPurchases } from "@/lib/ifm/rse-import";
 import { buildVendorNameMapFromRse, resolveCandidateVendorName } from "@/lib/ifm/vendor-names";
 import { buildVendorSummaries } from "@/lib/ifm/vendor-summary";
-import { isReviewerApproved } from "@/lib/ifm/reviewer-approval";
+import {
+  canOverrideApprove,
+  canReviewerApprove,
+  isReviewerApproved,
+  needsOwnerSignOff,
+} from "@/lib/ifm/reviewer-approval";
 import { usd, shortDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +40,14 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
       company: { include: { reviewSettings: true } },
       fundingCalculation: true,
       supplementalCalc: true,
+      cashRunwaySnapshot: true,
       fundingAllocations: true,
       dataGaps: true,
       purchaseDecisions: {
         include: { candidate: { include: { sources: true } } },
         orderBy: { id: "asc" },
       },
+      purchaseCandidates: { select: { termsStatus: true } },
       _count: { select: { purchaseCandidates: true, cashPositions: true } },
     },
   });
@@ -46,6 +56,7 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
   const fc = run.fundingCalculation;
   const settings = run.company.reviewSettings[0];
   const holdback = settings?.emergencyHoldbackAmount ?? 0;
+  const ownerApprovalThreshold = settings?.ownerApprovalThreshold ?? 25000;
   const allocByCandidate = new Map(run.fundingAllocations.map((a) => [a.purchaseCandidateId, a]));
 
   const rows = run.purchaseDecisions
@@ -65,6 +76,16 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
   });
 
   const coreAllocatable = Math.max(0, (fc?.coreAvailableInventoryFunding ?? 0) - holdback);
+
+  const termsPendingCount =
+    run.purchaseDecisions.length > 0
+      ? run.purchaseDecisions.filter((d) => d.candidate.termsStatus === "pending").length
+      : run.purchaseCandidates.filter((c) => c.termsStatus === "pending").length;
+
+  const runway = run.cashRunwaySnapshot;
+  const runwayWeeks = runway?.weeksJson
+    ? (JSON.parse(runway.weeksJson) as unknown[]).length
+    : run.runwayWeeks || settings?.runwayWeeks || 13;
 
   let vendorNameMap = new Map<string, string>();
   if (run.purchaseDecisions.length > 0) {
@@ -87,11 +108,14 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
     const unfunded = (alloc?.unfundedAmount ?? 0) + dn.delayedAmount + dn.excludedAmount;
     const recommended = alloc?.allocatedAmount ?? 0;
     const reviewerApproved = isReviewerApproved(dn);
-    const canReviewerApprove =
-      !dn.ownerApprovalRequired &&
-      !dn.financingApprovalRequired &&
-      !/Decline|Hold Until|Delay Purchase/.test(dn.systemDecisionLabel) &&
-      recommended > 0;
+    const canApprove =
+      canReviewerApprove(dn) && recommended > 0;
+    const canOverride = canOverrideApprove(dn);
+    const ownerSignOff = needsOwnerSignOff(
+      Math.max(recommended, dn.candidate.estimatedTotalCost),
+      dn,
+      ownerApprovalThreshold,
+    );
     return {
       id: dn.candidate.id,
       decisionId: dn.id,
@@ -108,7 +132,10 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
       reason: dn.decisionReason,
       reviewerApproved,
       approvedAmount: dn.approvedAmount,
-      canReviewerApprove,
+      decisionStatus: dn.decisionStatus,
+      canReviewerApprove: canApprove,
+      canOverrideApprove: canOverride && !reviewerApproved,
+      needsOwnerSignOff: ownerSignOff,
     };
   });
 
@@ -209,6 +236,32 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
         <Card label="Requested vs recommended" value={usd(totalRecommended)} hint={`of ${usd(totalRequested)} requested`} />
       </section>
 
+      {/* Company financing profile */}
+      <CompanyFinancingPanel
+        companyId={run.companyId}
+        settings={{
+          runwayWeeks: settings?.runwayWeeks ?? 13,
+          protectedCashReserve: settings?.protectedCashReserve ?? 0,
+          factoringActive: settings?.factoringActive ?? false,
+          factoringAdvanceRate: settings?.factoringAdvanceRate ?? 0.8,
+          factoringReserveRate: settings?.factoringReserveRate ?? 0.2,
+          factoringAdvanceLagDays: settings?.factoringAdvanceLagDays ?? 1,
+          typicalCustomerPayDays: settings?.typicalCustomerPayDays ?? 30,
+          collectionLagDays: settings?.collectionLagDays ?? 0,
+          chargebackTriggerType: settings?.chargebackTriggerType ?? null,
+          chargebackTriggerDays: settings?.chargebackTriggerDays ?? null,
+          locActive: settings?.locActive ?? false,
+        }}
+      />
+
+      {/* Management funding adjustment */}
+      <FundingAdjustmentPanel
+        runId={run.id}
+        manualCashAddition={run.manualCashAddition}
+        manualCashReduction={run.manualCashReduction}
+        fundingAdjustmentNote={run.fundingAdjustmentNote}
+      />
+
       {/* Core funding breakdown — Document 4 §4 */}
       {fc && (
         <section style={{ marginTop: 14, background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 18px" }}>
@@ -218,13 +271,61 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px", fontSize: 13 }}>
             <span>Cash {usd(fc.cashOnHand)}</span>
             <span style={{ color: "var(--good)" }}>+ Inflows {usd(fc.confidentExpectedInflows)}</span>
+            {(fc.manualCashAdditions > 0 || run.manualCashAddition > 0) && (
+              <span style={{ color: "var(--good)" }}>+ Manual addition {usd(fc.manualCashAdditions || run.manualCashAddition)}</span>
+            )}
+            {(fc.manualCashReductions > 0 || run.manualCashReduction > 0) && (
+              <span style={{ color: "var(--bad)" }}>− Manual reduction {usd(fc.manualCashReductions || run.manualCashReduction)}</span>
+            )}
             <span style={{ color: "var(--bad)" }}>− Reserve {usd(fc.protectedCashReserve)}</span>
             <span style={{ color: "var(--bad)" }}>− Outflows {usd(fc.requiredOutflowsTotal)}</span>
             <span style={{ color: "var(--bad)" }}>− AP pressure {usd(fc.apPressureTotal)}</span>
             <span style={{ color: "var(--bad)" }}>− Open PO exposure {usd(fc.openPoExposureTotal)}</span>
             <span style={{ fontWeight: 700 }}>= Core {usd(fc.coreAvailableInventoryFunding)}</span>
           </div>
+          {run.fundingAdjustmentNote && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>
+              Adjustment note: {run.fundingAdjustmentNote}
+            </div>
+          )}
         </section>
+      )}
+
+      {!fc && (run.manualCashAddition > 0 || run.manualCashReduction > 0) && (
+        <section style={{ marginTop: 14, fontSize: 13, color: "var(--muted)" }}>
+          Manual adjustment saved ({usd(run.manualCashAddition)} addition). Recalculate to apply.
+          {run.fundingAdjustmentNote && <> Note: {run.fundingAdjustmentNote}</>}
+        </section>
+      )}
+
+      {termsPendingCount > 0 && (
+        <section
+          style={{
+            marginTop: 14,
+            borderLeft: "4px solid var(--warn)",
+            background: "var(--panel)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            padding: "10px 14px",
+            fontSize: 13,
+          }}
+        >
+          <strong>{termsPendingCount} line(s)</strong> have vendor terms pending in RSE. Import is allowed;
+          <strong> Approve for PO is blocked</strong> until buyer confirms or overrides terms per vendor batch.
+        </section>
+      )}
+
+      {runway && (
+        <CashRunwayPanel
+          runwayWeeks={runwayWeeks}
+          minCashBalance={runway.minCashBalance}
+          minCashWeekIndex={runway.minCashWeekIndex}
+          belowReserveFlag={runway.belowReserveFlag}
+          protectedReserve={settings?.protectedCashReserve ?? 0}
+          weeks={JSON.parse(runway.weeksJson)}
+          tailCommitments={JSON.parse(runway.tailCommitmentsJson)}
+          termsPendingCount={termsPendingCount}
+        />
       )}
 
       {/* Purchase Funding Decision Board — Document 6 §5 */}
@@ -236,6 +337,7 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
       ) : (
         <DecisionBoard
           runId={run.id}
+          ownerApprovalThreshold={ownerApprovalThreshold}
           itemRows={itemRows}
           vendorRows={vendorRows}
           handoffSummary={handoffSummary}

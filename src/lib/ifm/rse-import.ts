@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { resolveDisplayVendorName } from "@/lib/ifm/vendor-names";
+import { parseTermsToSchedule } from "@/lib/ifm/terms/parse-terms";
 
 const DEFAULT_RSE_API_URL = "http://127.0.0.1:3000";
 
@@ -24,6 +25,14 @@ export interface RseReadyPurchaseLine {
   approvedClass: string | null;
   availableInventoryPosition: number | null;
   targetStockingPosition: number | null;
+  standardVendorTerms?: string | null;
+  orderTerms?: string | null;
+  termsStatus?: string;
+  orderDiscountScope?: string | null;
+  orderDiscountType?: string | null;
+  orderDiscountValue?: number | null;
+  orderDiscountNote?: string | null;
+  standardUnitCost?: number | null;
 }
 
 export interface RseReadyPurchasesResponse {
@@ -39,6 +48,8 @@ export interface RseReadyPurchasesResponse {
 function rseApiBase(): string {
   return (process.env.RSE_API_URL ?? DEFAULT_RSE_API_URL).replace(/\/$/, "");
 }
+
+export { rseApiBase };
 
 export async function fetchRseReadyPurchases(preRunId?: string): Promise<RseReadyPurchasesResponse> {
   const url = new URL(`${rseApiBase()}/api/ifm/ready-purchases`);
@@ -138,6 +149,14 @@ export async function importRseIntoRun(
     const vendorName = vendorLabel(line);
     vendors.add(vendorName);
 
+    const termsStatus = line.termsStatus ?? "pending";
+    const orderTerms = line.orderTerms ?? null;
+    const anchor = run.reviewDate;
+    const schedule =
+      orderTerms && termsStatus !== "pending"
+        ? parseTermsToSchedule(orderTerms, Math.max(0, line.estimatedTotalCost), anchor)
+        : null;
+
     await prisma.purchaseCandidate.create({
       data: {
         ifmRunId,
@@ -151,6 +170,24 @@ export async function importRseIntoRun(
         urgencyLevel: mapUrgency(line.urgencyLevel),
         dataConfidence: "Medium Confidence",
         supportingEvidence: `RSE PRE ${line.preRunId.slice(0, 8)} · ${line.preStatus} · ${line.ifmStatus}`,
+        standardVendorTerms: line.standardVendorTerms ?? null,
+        orderTerms,
+        termsStatus,
+        orderDiscountScope: line.orderDiscountScope ?? null,
+        orderDiscountType: line.orderDiscountType ?? null,
+        orderDiscountValue: line.orderDiscountValue ?? null,
+        orderDiscountNote: line.orderDiscountNote ?? null,
+        standardUnitCost: line.standardUnitCost ?? line.unitCost ?? null,
+        expectedPurchaseDate: anchor,
+        paymentScheduleJson: schedule
+          ? JSON.stringify(
+              schedule.installments.map((i) => ({
+                dueDate: i.dueDate.toISOString(),
+                amount: i.amount,
+                label: i.label,
+              })),
+            )
+          : null,
         sources: {
           create: [
             {

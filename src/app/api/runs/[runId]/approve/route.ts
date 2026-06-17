@@ -7,7 +7,14 @@ export async function POST(
 ) {
   const { runId } = await params;
 
-  let body: { vendorName?: string; decisionIds?: string[] } = {};
+  let body: {
+    vendorName?: string;
+    decisionIds?: string[];
+    override?: boolean;
+    overrideReason?: string;
+    ownerConfirm?: boolean;
+    amounts?: Record<string, number>;
+  } = {};
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -19,6 +26,10 @@ export async function POST(
       { error: "Provide vendorName or decisionIds to approve." },
       { status: 400 },
     );
+  }
+
+  if (body.override && !body.overrideReason?.trim()) {
+    return NextResponse.json({ error: "Override requires overrideReason." }, { status: 400 });
   }
 
   try {
