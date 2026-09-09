@@ -57,6 +57,8 @@ model IfmRun {
   manualCashReduction Float   @default(0) @map("manual_cash_reduction")
   fundingAdjustmentNote String? @map("funding_adjustment_note")
   runwayWeeks         Int     @default(13) @map("runway_weeks")
+  // Domains explicitly confirmed as none (Document 3 hard rule — blank ≠ zero).
+  confirmedNoneJson   String? @map("confirmed_none_json")
 
   cashPositions       CashPosition[]
   requiredOutflows    RequiredOutflow[]

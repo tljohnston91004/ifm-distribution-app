@@ -7,6 +7,7 @@ interface CreateRunBody {
   reviewDate: string;
   fundingWindowStart: string;
   fundingWindowEnd: string;
+  reviewCadence?: string;
   protectedCashReserve?: number;
   ownerApprovalThreshold?: number;
   emergencyHoldbackAmount?: number;
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
         reviewDate: new Date(body.reviewDate),
         fundingWindowStart: new Date(body.fundingWindowStart),
         fundingWindowEnd: new Date(body.fundingWindowEnd),
+        reviewCadence: body.reviewCadence ?? "weekly",
         runStatus: "Draft",
       },
     });

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { CalculateButton, ImportRseButton } from "@/components/RunActions";
+import { CalculateButton, ImportRseButton, RefreshRseTermsButton } from "@/components/RunActions";
 import DecisionBoard from "@/components/DecisionBoard";
 import FundingAdjustmentPanel from "@/components/FundingAdjustmentPanel";
 import CashRunwayPanel from "@/components/CashRunwayPanel";
 import CompanyFinancingPanel from "@/components/CompanyFinancingPanel";
+import UploadCenterPanel from "@/components/UploadCenterPanel";
 import { buildBanners } from "@/lib/ifm/banners";
 import { fetchRseReadyPurchases } from "@/lib/ifm/rse-import";
 import { buildVendorNameMapFromRse, resolveCandidateVendorName } from "@/lib/ifm/vendor-names";
@@ -16,6 +17,7 @@ import {
   isReviewerApproved,
   needsOwnerSignOff,
 } from "@/lib/ifm/reviewer-approval";
+import { parseConfirmedNone, persistReconciledConfirmedNone } from "@/lib/ifm/upload/import";
 import { usd, shortDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -48,10 +50,37 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
         orderBy: { id: "asc" },
       },
       purchaseCandidates: { select: { termsStatus: true } },
-      _count: { select: { purchaseCandidates: true, cashPositions: true } },
+      _count: {
+        select: {
+          purchaseCandidates: true,
+          cashPositions: true,
+          requiredOutflows: true,
+          apItems: true,
+          arItems: true,
+          openPurchaseOrders: true,
+          inventorySnapshots: true,
+          reorderSources: true,
+        },
+      },
     },
   });
   if (!run) notFound();
+
+  const vendorTermsCount = await prisma.vendorTerm.count({
+    where: { vendor: { companyId: run.companyId } },
+  });
+  const uploadCounts = {
+    cash_positions: run._count.cashPositions,
+    required_outflows: run._count.requiredOutflows,
+    ap_items: run._count.apItems,
+    ar_items: run._count.arItems,
+    open_purchase_orders: run._count.openPurchaseOrders,
+    inventory_snapshots: run._count.inventorySnapshots,
+    reorder_sources: run._count.reorderSources,
+    vendor_terms: vendorTermsCount,
+    purchase_candidates: run._count.purchaseCandidates,
+  };
+  const confirmedNone = await persistReconciledConfirmedNone(run.id, uploadCounts);
 
   const fc = run.fundingCalculation;
   const settings = run.company.reviewSettings[0];
@@ -200,13 +229,21 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
         ) : (
           <>
             {run._count.purchaseCandidates} purchase candidate(s) loaded.
-            {run._count.cashPositions === 0 && (
-              <> Add cash in Prisma Studio (<code>npm run db:studio</code>) before Recalculate.</>
+            {run._count.cashPositions === 0 && !confirmedNone.cash && (
+              <> Upload cash in the <strong>Data Upload Center</strong> below, then Recalculate.</>
             )}
             {run._count.cashPositions > 0 && <> Click <strong>Recalculate</strong> for funding decisions.</>}
           </>
         )}
       </section>
+
+      <UploadCenterPanel
+        runId={run.id}
+        reviewDate={run.reviewDate.toISOString().slice(0, 10)}
+        reviewCadence={run.reviewCadence}
+        counts={uploadCounts}
+        confirmedNone={confirmedNone}
+      />
 
       {/* Warning banners — Document 5 §8 */}
       <section style={{ marginTop: 18, display: "grid", gap: 8 }}>
@@ -310,8 +347,15 @@ export default async function RunWorkspace({ params }: { params: Promise<{ runId
             fontSize: 13,
           }}
         >
-          <strong>{termsPendingCount} line(s)</strong> have vendor terms pending in RSE. Import is allowed;
-          <strong> Approve for PO is blocked</strong> until buyer confirms or overrides terms per vendor batch.
+          <strong>{termsPendingCount} line(s)</strong> still show vendor terms as pending in IFM.
+          If you already confirmed terms in RSE, click <strong>Refresh terms from RSE</strong> — IFM keeps a
+          snapshot from import time and does not auto-sync.
+          <strong> Approve for PO</strong> stays blocked until IFM sees confirmed terms.
+          {termsPendingCount > 0 && (
+            <span style={{ display: "inline-block", marginTop: 8 }}>
+              <RefreshRseTermsButton runId={run.id} />
+            </span>
+          )}
         </section>
       )}
 

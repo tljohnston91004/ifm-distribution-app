@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/db";
 import { runFunding } from "@/lib/ifm/engine";
 import { buildCashRunway } from "@/lib/ifm/runway/build-runway";
+import {
+  buildApOutflowsByWeek,
+  buildArInflowsByWeek,
+  buildOtherOutflowsByWeek,
+} from "@/lib/ifm/runway/week-maps";
+import { parseConfirmedNone } from "@/lib/ifm/upload/import";
 import type {
   CandidateInput,
   FinancingInput,
@@ -167,6 +173,7 @@ export function toFundingRunInput(run: RunWithRelations): FundingRunInput {
     candidates,
     manualCashAdditions: run.manualCashAddition,
     manualCashReductions: run.manualCashReduction,
+    confirmedNone: parseConfirmedNone(run.confirmedNoneJson),
   };
 }
 
@@ -259,11 +266,33 @@ export async function computeRun(runId: string) {
     const settingsRow = run.company.reviewSettings[0];
     const runwayWeeks = run.runwayWeeks || settingsRow?.runwayWeeks || 13;
     const rseBySku = new Map(run.rseSignals.map((s) => [s.skuOrItemId, s]));
+
+    const apOutflowsByWeek = buildApOutflowsByWeek(
+      run.apItems.map((a) => ({ date: a.dueDate, amount: a.amountDue })),
+      run.reviewDate,
+      runwayWeeks,
+    );
+    const otherOutflowsByWeek = buildOtherOutflowsByWeek(
+      run.requiredOutflows.map((o) => ({ date: o.dueDate, amount: o.amount })),
+      run.reviewDate,
+      runwayWeeks,
+    );
+    const arInflowsByWeek = buildArInflowsByWeek(
+      run.arItems
+        .filter((a) => a.includedInCoreFunding && !a.factoredFlag)
+        .map((a) => ({ date: a.expectedCollectionDate, amount: a.expectedAmount })),
+      run.reviewDate,
+      runwayWeeks,
+    );
+
     const runway = buildCashRunway({
       reviewDate: run.reviewDate,
       runwayWeeks,
       startingCash: funding.core.cashOnHand + run.manualCashAddition - run.manualCashReduction,
       protectedReserve: funding.core.protectedCashReserve,
+      apOutflowsByWeek,
+      otherOutflowsByWeek,
+      arInflowsByWeek,
       candidates: run.purchaseCandidates.map((c) => ({
         id: c.id,
         vendorName: c.vendorName,

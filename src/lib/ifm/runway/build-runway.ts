@@ -1,19 +1,11 @@
 import { parseTermsToSchedule, installmentsAfterHorizon } from "@/lib/ifm/terms/parse-terms";
 import { estimateCashBackDays, parseSellThroughDaysJson, sellThroughDaysForClass } from "./sell-through";
+import { startOfWeek } from "./week-maps";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function round2(n: number) {
   return Math.round(n * 100) / 100;
-}
-
-function startOfWeek(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  const day = x.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  x.setDate(x.getDate() + diff);
-  return x;
 }
 
 export interface RunwayCandidateInput {

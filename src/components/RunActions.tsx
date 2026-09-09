@@ -116,3 +116,31 @@ export function CalculateButton({ runId }: { runId: string }) {
     </button>
   );
 }
+
+export function RefreshRseTermsButton({ runId }: { runId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  return (
+    <button
+      type="button"
+      style={{ ...btnGhost, opacity: loading ? 0.6 : 1 }}
+      disabled={loading}
+      onClick={async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(`/api/runs/${runId}/refresh-rse-terms`, { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error ?? "Terms refresh failed");
+          alert(data.message ?? `Updated ${data.updated} line(s).`);
+          router.refresh();
+        } catch (e) {
+          alert(e instanceof Error ? e.message : "Terms refresh failed");
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      {loading ? "Refreshing…" : "Refresh terms from RSE"}
+    </button>
+  );
+}

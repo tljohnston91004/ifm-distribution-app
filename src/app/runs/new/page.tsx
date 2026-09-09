@@ -4,6 +4,28 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function nextMonday(from = new Date()): Date {
+  const d = new Date(from);
+  d.setHours(12, 0, 0, 0);
+  const day = d.getDay();
+  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 0 : 8 - day;
+  d.setDate(d.getDate() + daysUntilMonday);
+  return d;
+}
+
+function addDays(d: Date, days: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+
+const monday = nextMonday();
+const windowEnd = addDays(monday, 30);
+
 const field: React.CSSProperties = {
   background: "var(--panel-2)",
   border: "1px solid var(--border)",
@@ -19,10 +41,11 @@ export default function NewRunPage() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     companyName: "",
-    runName: "Weekly Funding Review",
-    reviewDate: "2026-06-06",
-    fundingWindowStart: "2026-06-06",
-    fundingWindowEnd: "2026-07-06",
+    runName: `Weekly Funding Review — ${isoDate(monday)}`,
+    reviewDate: isoDate(monday),
+    fundingWindowStart: isoDate(monday),
+    fundingWindowEnd: isoDate(windowEnd),
+    reviewCadence: "weekly",
     protectedCashReserve: 250000,
     ownerApprovalThreshold: 40000,
     emergencyHoldbackAmount: 10000,
@@ -37,7 +60,8 @@ export default function NewRunPage() {
       <Link href="/" style={{ fontSize: 13, color: "var(--muted)" }}>← All runs</Link>
       <h1 style={{ fontSize: 24, margin: "8px 0 4px" }}>New IFM Run Setup</h1>
       <p style={{ color: "var(--muted)", marginTop: 0, fontSize: 14 }}>
-        Company, run name, review date, funding window, reserve, and thresholds. Data intake comes next.
+        Company, run name, review date (typically Monday), funding window, reserve, and thresholds.
+        After create, use the <strong>Data Upload Center</strong> for financial and POS files, then import from RSE.
       </p>
 
       <form

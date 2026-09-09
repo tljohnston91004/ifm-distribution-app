@@ -243,3 +243,91 @@ export async function importRseIntoRun(
     vendorCount: vendors.size,
   };
 }
+
+export interface RefreshRseTermsResult {
+  updated: number;
+  stillPending: number;
+  total: number;
+}
+
+/** Pull latest vendor terms from RSE onto already-imported purchase candidates. */
+export async function refreshRseTermsOnRun(ifmRunId: string): Promise<RefreshRseTermsResult> {
+  const run = await prisma.ifmRun.findUnique({
+    where: { id: ifmRunId },
+    include: {
+      purchaseCandidates: {
+        where: { sourceOfRequest: "RSE Recommendation" },
+        include: { sources: true },
+      },
+    },
+  });
+  if (!run) throw new Error("IFM run not found");
+  if (run.purchaseCandidates.length === 0) {
+    throw new Error("No RSE purchase candidates on this run. Import from RSE first.");
+  }
+
+  const payload = await fetchRseReadyPurchases();
+  const lineByPreId = new Map(payload.lines.map((line) => [line.preLineId, line]));
+
+  let updated = 0;
+  let stillPending = 0;
+
+  for (const candidate of run.purchaseCandidates) {
+    const preLineId = candidate.sources[0]?.sourceReferenceId?.trim();
+    if (!preLineId) {
+      if (candidate.termsStatus === "pending") stillPending += 1;
+      continue;
+    }
+
+    const line = lineByPreId.get(preLineId);
+    if (!line) {
+      if (candidate.termsStatus === "pending") stillPending += 1;
+      continue;
+    }
+
+    const termsStatus = line.termsStatus ?? "pending";
+    const orderTerms = line.orderTerms ?? null;
+    const schedule =
+      orderTerms && termsStatus !== "pending"
+        ? parseTermsToSchedule(orderTerms, Math.max(0, candidate.estimatedTotalCost), run.reviewDate)
+        : null;
+
+    const changed =
+      candidate.termsStatus !== termsStatus ||
+      candidate.orderTerms !== orderTerms ||
+      candidate.standardVendorTerms !== (line.standardVendorTerms ?? null);
+
+    if (changed) {
+      await prisma.purchaseCandidate.update({
+        where: { id: candidate.id },
+        data: {
+          standardVendorTerms: line.standardVendorTerms ?? null,
+          orderTerms,
+          termsStatus,
+          orderDiscountScope: line.orderDiscountScope ?? null,
+          orderDiscountType: line.orderDiscountType ?? null,
+          orderDiscountValue: line.orderDiscountValue ?? null,
+          orderDiscountNote: line.orderDiscountNote ?? null,
+          paymentScheduleJson: schedule
+            ? JSON.stringify(
+                schedule.installments.map((i) => ({
+                  dueDate: i.dueDate.toISOString(),
+                  amount: i.amount,
+                  label: i.label,
+                })),
+              )
+            : null,
+        },
+      });
+      updated += 1;
+    }
+
+    if (termsStatus === "pending") stillPending += 1;
+  }
+
+  return {
+    updated,
+    stillPending,
+    total: run.purchaseCandidates.length,
+  };
+}
