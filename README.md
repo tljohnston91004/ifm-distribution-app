@@ -43,5 +43,5 @@ from the IFM-Dist `.docx` package.
 npm install
 cp .env.example .env
 npm run db:push      # create the SQLite schema
-npm run dev          # http://localhost:3000
+npm run dev          # http://localhost:3001 (RSE uses 3000)
 ```
